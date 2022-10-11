@@ -6,7 +6,8 @@ public:
     BlueMotor();
     void setEffort(int effort);
     //void moveTo(long position);
-    void moveTo(long target, int effort);
+    void moveTo(long target, float effort);
+    void setEffortDB(float effort, bool clockwise);
     long getPosition();
     void reset();
     void setup();

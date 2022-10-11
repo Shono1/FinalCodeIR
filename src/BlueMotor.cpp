@@ -93,17 +93,40 @@ void BlueMotor::setEffort(int effort, bool clockwise)
         digitalWrite(AIN1, LOW);
         digitalWrite(AIN2, HIGH);
     }
-    OCR1C = constrain(effort, 0, 400);
+    //OCR1C = constrain(effort, 0, 400);
 }
 
-void BlueMotor::moveTo(long target, int effort)  //Move to this encoder position within the specified
+void BlueMotor::setEffortDB(float effort, bool clockwise)
+{
+    float outeff;
+    if (clockwise)
+    {
+        //digitalWrite(AIN1, HIGH);
+        //digitalWrite(AIN2, LOW);
+        float outeff = effort*0.13 + 347;
+        
+    }
+    else
+    {
+        //digitalWrite(AIN1, LOW);
+        //digitalWrite(AIN2, HIGH);
+        float outeff = effort*0.15 - 347;
+    }
+    //OCR1C = constrain(effort, 0, 400);
+    setEffort(outeff);
+}
+
+void BlueMotor::moveTo(long target, float outeff)  //Move to this encoder position within the specified
 {                                    //tolerance in the header file using proportional control
                                      //then stop
     if (target > count)
     {
         while(count < target)
         {
-            setEffort(effort);
+            float error = abs(target - count);
+            float kp = 10;
+            outeff = outeff + error*kp;
+            setEffortDB(outeff, true);
         }
         //count = 0;
         setEffort(0);
@@ -112,7 +135,10 @@ void BlueMotor::moveTo(long target, int effort)  //Move to this encoder position
     {
         while(count > target)
         {
-            setEffort(-1*effort);
+            float error = abs(target - count);
+            float kp = 10;
+            outeff = outeff + error*kp;
+            setEffort(-1*outeff);
         }
         //count = 0;
         setEffort(0);
