@@ -48,17 +48,7 @@ enum ChallengeState
   Challenge_032_StartTurnAtCross,
   Challenge_033_WaitForTurnAtCross,
   Challenge_034_SearchForLineAtCross,
-  Challenge_040_StartSearch,
-  Challenge_050_TurnatCrossing,
-  Challenge_060_ApproachPanel,
-  Challenge_070_ApproachPlacement,
-  Challenge_080_TurnAround,
-  Challenge_090_MovetoAngleOne,
-  Challenge_100_MovetoAngleTwo,
-  Challenge_110_OpentheGripper,
-  Challenge_120_ClosetheGripper,
-  Challenge_130_Stop,
-  Challenge_140_StopIdle
+  Challenge_040_ApproachPanel
 } challengeState;
 
 enum MotorState

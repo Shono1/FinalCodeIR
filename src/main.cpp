@@ -26,7 +26,7 @@ Rangefinder rangefinder(RANGEFINDER_ECHO_PIN, RANGEFINDER_TRIG_PIN);
 
 void setTicksAtAngle(float targetAngle);
 void setTicksAtDistance(float targetDistance);
-void setDriveMotorPower(Motor whichMotor, int deltaCM, int maxPower);
+void updateDriveMotorPower_TargetMode(Motor whichMotor, int deltaCM, int maxPower);
 void updateOpMode();
 void updateMotors();
 bool pollForSignal(int whichSignal);
@@ -48,7 +48,7 @@ void setTicksAtDistance(float targetDistance) // Distance in cm, direction is de
   rightMotorTarget = chassis.rightMotor.getCount() + ticksToGo;
 }
 
-void setDriveMotorPower(Motor whichMotor, int deltaCM, int maxPower)
+void updateDriveMotorPower_TargetMode(Motor whichMotor, int deltaCM, int maxPower)
 {
   int16_t power = deltaCM * DRIVE_KP;
   int powSign = power < 0 ? -1 : 1;
@@ -64,7 +64,7 @@ void setDriveMotorPower(Motor whichMotor, int deltaCM, int maxPower)
   }
 }
 
-void setDriveMotorPower(Motor whichMotor, int power)
+void updateDriveMotorPower_Directly(Motor whichMotor, int power)
 {
   switch (whichMotor)
   {
@@ -75,6 +75,11 @@ void setDriveMotorPower(Motor whichMotor, int power)
     chassis.rightMotor.setMotorEffort(power);
     break;
   }
+}
+
+void updateBlueMotorPower_TargetMode(float deltaDegrees, int maxPower)
+{
+  int16_t outPow = (int16_t)(deltaDegrees * LIFT_KP);
 }
 
 void updateOpMode()
@@ -112,8 +117,8 @@ void updateOpMode()
     {
       operatingState = Operating_Running;
     }
-    if (pollForSignal(IR_BUTTON_RESET)) 
-    //note: this bit is outside of isa 88 spec, but this a) isn't a batch control process and b) is helpful
+    if (pollForSignal(IR_BUTTON_RESET))
+    // note: this bit is outside of isa 88 spec, but this a) isn't a batch control process and b) is helpful
     {
       operatingState = Operating_Idle;
       challengeState = Challenge_010_StartPreTurn;
@@ -167,9 +172,9 @@ void updateMotors()
       float leftDelta = (leftMotorTarget - leftDriveCurrentTicks) * chassis.cmPerEncoderTick;
       float rightDelta = (rightMotorTarget - rightDriveCurrentTicks) * chassis.cmPerEncoderTick;
       float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
-      setDriveMotorPower(Motor_LeftDrive, leftDelta, maxDrivePower);
-      setDriveMotorPower(Motor_RightDrive, rightDelta, maxDrivePower);
-      setDriveMotorPower(Motor_Blue, blueDelta, maxLiftPower);
+      updateDriveMotorPower_TargetMode(Motor_LeftDrive, leftDelta, maxDrivePower);
+      updateDriveMotorPower_TargetMode(Motor_RightDrive, rightDelta, maxDrivePower);
+      updateDriveMotorPower_TargetMode(Motor_Blue, blueDelta, maxLiftPower);
 
       if (abs(leftDelta) < DRIVE_TOLERANCE || abs(rightDelta) < DRIVE_TOLERANCE)
       {
@@ -188,8 +193,8 @@ void updateMotors()
     float leftColor = analogRead(LEFT_LINE_PIN);
     float rightColor = analogRead(RIGHT_LINE_PIN);
     float colorDelta = leftColor - rightColor;
-    setDriveMotorPower(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
-    setDriveMotorPower(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
+    updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+    updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
 
     // Serial.print("Left Power: ");
     // Serial.println(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
@@ -289,7 +294,7 @@ void doChallenge()
     blueMotorState = MotorState_ToTarget;
     driveMovementDone = false;
     setTicksAtDistance(7);
-    challengeState = Challenge_031_WaitForForwardAtCross;   
+    challengeState = Challenge_031_WaitForForwardAtCross;
   }
   break;
 
@@ -297,12 +302,13 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone) {
+    if (driveMovementDone)
+    {
       setTicksAtDistance(0);
       challengeState = Challenge_032_StartTurnAtCross;
     }
   }
-  break; 
+  break;
 
   case Challenge_032_StartTurnAtCross:
   {
@@ -318,7 +324,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone) {
+    if (driveMovementDone)
+    {
       setTicksAtDistance(0);
       challengeState = Challenge_034_SearchForLineAtCross;
       leftBlackFlag = false;
@@ -329,6 +336,8 @@ void doChallenge()
 
   case Challenge_034_SearchForLineAtCross:
   {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
     setTicksAtAngle(-10);
     if (!rightBlackFlag)
     {
@@ -342,14 +351,20 @@ void doChallenge()
     if (leftBlackFlag && rightBlackFlag)
     {
       setTicksAtAngle(0);
-      challengeState = Challenge_040_StartSearch;
+      challengeState = Challenge_040_ApproachPanel;
     }
   }
   break;
 
-  case Challenge_040_StartSearch:
+  case Challenge_040_ApproachPanel:
   {
-    operatingState = Operating_Done;
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
+
+    if (rangefinder.getDistance() < 20)
+    {
+      operatingState = Operating_Done;
+    }
   }
   break;
 
@@ -372,7 +387,7 @@ void setup()
   servo.setMinMaxMicroseconds(900, 2500); // 500 is closed, 2000 is opened
 
   operatingState = Operating_Idle;
-  challengeState = Challenge_010_StartPreTurn;
+  challengeState = Challenge_040_ApproachPanel;
   driveMotorState = MotorState_Idle;
   blueMotorState = MotorState_Idle;
 
