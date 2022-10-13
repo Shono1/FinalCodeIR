@@ -93,7 +93,8 @@ void BlueMotor::setEffort(int effort, bool clockwise)
         digitalWrite(AIN1, LOW);
         digitalWrite(AIN2, HIGH);
     }
-    //OCR1C = constrain(effort, 0, 400);
+    OCR1C = constrain(effort, 0, 400);
+    
 }
 
 void BlueMotor::setEffortDB(float effort, bool clockwise)
