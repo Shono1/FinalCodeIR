@@ -3,6 +3,7 @@
 #define IR_REMOTE_PIN 14
 #define RANGEFINDER_ECHO_PIN 17
 #define RANGEFINDER_TRIG_PIN 12
+
 #define DRIVE_KP 50
 #define LIFT_KP 0.7
 #define BASE_MAX_DRIVE_POWER 100
@@ -13,6 +14,7 @@
 // TODO: Calculate BOTH deadbands
 #define DRIVE_DEADBAND 50 
 #define LIFT_DEADBAND 350
+#define TICKS_PER_REVOLUTION 540
 
 #define LEFT_LINE_PIN 20
 #define RIGHT_LINE_PIN 22
@@ -48,7 +50,8 @@ enum ChallengeState
   Challenge_032_StartTurnAtCross,
   Challenge_033_WaitForTurnAtCross,
   Challenge_034_SearchForLineAtCross,
-  Challenge_040_ApproachPanel
+  Challenge_040_ApproachPanel,
+  Challenge_050_BeginLift
 } challengeState;
 
 enum MotorState

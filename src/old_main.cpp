@@ -163,7 +163,7 @@
 //   chassis.rightMotor.setMotorEffort(0);
 // }
 
-// int * setTicksAtAngle(float targetAngle) // Angle direction is determined by sign, positive is anticlockwise
+// int * setTicksAtAngleDrive(float targetAngle) // Angle direction is determined by sign, positive is anticlockwise
 // {
 //   int ticksToGo = targetAngle * (chassis.robotRadius * 3.14 / 180.0) / chassis.cmPerEncoderTick;
 //   int motorTargets[2]; // 0 is left, 1 is right

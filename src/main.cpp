@@ -24,7 +24,7 @@ IRDecoder decoder(IR_REMOTE_PIN);
 Servo32U4 servo;
 Rangefinder rangefinder(RANGEFINDER_ECHO_PIN, RANGEFINDER_TRIG_PIN);
 
-void setTicksAtAngle(float targetAngle);
+void setTicksAtAngleDrive(float targetAngle);
 void setTicksAtDistance(float targetDistance);
 void updateDriveMotorPower_TargetMode(Motor whichMotor, int deltaCM, int maxPower);
 void updateOpMode();
@@ -32,13 +32,18 @@ void updateMotors();
 bool pollForSignal(int whichSignal);
 void doChallenge();
 
-void setTicksAtAngle(float targetAngle) // Angle direction is determined by sign, positive is anticlockwise
+void setTicksAtAngleDrive(float targetAngle) // Angle direction is determined by sign, positive is anticlockwise
 {
   int ticksToGo = targetAngle * (chassis.robotRadius * PI / 180.0) / chassis.cmPerEncoderTick;
   // int motorTargets[2]; // 0 is left, 1 is right
   leftMotorTarget = chassis.leftMotor.getCount() - ticksToGo;
   rightMotorTarget = chassis.rightMotor.getCount() + ticksToGo;
   // return motorTargets;
+}
+
+void setTicksAtAnlgeLift(float targetAngle) 
+{
+  int ticksToGo = targetAngle 
 }
 
 void setTicksAtDistance(float targetDistance) // Distance in cm, direction is determined by sign
@@ -224,7 +229,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    setTicksAtAngle(90);
+    setTicksAtAngleDrive(90);
     driveMovementDone = false;
     challengeState = Challenge_011_WaitForTurn;
     Serial.println("010 - Starting Pre Turn");
@@ -248,7 +253,7 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
     Serial.println("012 - Search for Line");
-    setTicksAtAngle(10);
+    setTicksAtAngleDrive(10);
     if (!leftBlackFlag)
     {
       leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
@@ -260,7 +265,7 @@ void doChallenge()
 
     if (leftBlackFlag && rightBlackFlag)
     {
-      setTicksAtAngle(0);
+      setTicksAtAngleDrive(0);
       challengeState = Challenge_020_FollowLine;
     }
   }
@@ -287,7 +292,7 @@ void doChallenge()
     // driveMotorState = MotorState_ToTarget;
     // blueMotorState = MotorState_ToTarget;
     // driveMovementDone = false;
-    // setTicksAtAngle(60);
+    // setTicksAtAngleDrive(60);
     // challengeState = Challenge_031_WaitForForwardAtCross;
 
     driveMotorState = MotorState_ToTarget;
@@ -315,7 +320,7 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
     driveMovementDone = false;
-    setTicksAtAngle(-60);
+    setTicksAtAngleDrive(-60);
     challengeState = Challenge_033_WaitForTurnAtCross;
   }
   break;
@@ -338,7 +343,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    setTicksAtAngle(-10);
+    setTicksAtAngleDrive(-10);
     if (!rightBlackFlag)
     {
       rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
@@ -350,7 +355,7 @@ void doChallenge()
 
     if (leftBlackFlag && rightBlackFlag)
     {
-      setTicksAtAngle(0);
+      setTicksAtAngleDrive(0);
       challengeState = Challenge_040_ApproachPanel;
     }
   }
@@ -365,6 +370,13 @@ void doChallenge()
     {
       operatingState = Operating_Done;
     }
+  }
+  break;
+
+  case Challenge_050_BeginLift:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
   }
   break;
 
