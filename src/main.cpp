@@ -88,8 +88,7 @@ void updateDriveMotorPower_Directly(Motor whichMotor, int power)
 void updateBlueMotorPower_TargetMode(float deltaDegrees, int maxPower)
 {
   int16_t outPow = (int16_t)(deltaDegrees * LIFT_KP);
-  Serial.println(outPow);
-  motor.setEffort(-400);
+  motor.setEffort(outPow);
 }
 
 void updateOpMode()
@@ -243,14 +242,7 @@ void updateMotors()
     break;
   case MotorState_LineFollow:
   {
-    float leftColor = analogRead(LEFT_LINE_PIN);
-    float rightColor = analogRead(RIGHT_LINE_PIN);
-    float colorDelta = leftColor - rightColor;
-    updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
-    updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
-
-    // Serial.print("Left Power: ");
-    // Serial.println(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+    // unused mode
   }
   break;
   }
