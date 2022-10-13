@@ -6,7 +6,7 @@
 
 #define DRIVE_KP 50
 // TODO: Tune liftKP
-#define LIFT_KP 4000
+#define LIFT_KP 4
 #define BASE_MAX_DRIVE_POWER 100
 #define BASE_MAX_LIFT_POWER 400
 #define DRIVE_TOLERANCE 0.5
@@ -15,7 +15,7 @@
 // TODO: Calculate BOTH deadbands
 #define DRIVE_DEADBAND 50 
 #define LIFT_DEADBAND 350
-#define TICKS_PER_LIFT_OUTPUT_DEGREE 48
+#define TICKS_PER_LIFT_OUTPUT_DEGREE 96
 
 #define LEFT_LINE_PIN 20
 #define RIGHT_LINE_PIN 22
@@ -29,6 +29,9 @@
 #define IR_BUTTON_STOP 0x06 // stop/mode
 #define IR_BUTTON_RESET 0x0E // back
 
+#define TRANSFER_BLOCK_ANGLE 0
+#define ROOF_25_ANGLE 140
+#define ROOF_45_ANGLE 87
 
 
 enum OperatingState

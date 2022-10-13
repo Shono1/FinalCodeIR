@@ -41,7 +41,7 @@ void setTicksAtAngleDrive(float targetAngle) // Angle direction is determined by
   // return motorTargets;
 }
 
-void setTicksAtAnlgeLift(float targetAngle)  // Absolute output angle, NOT A DELTA!!!!
+void setTicksAtAngleLift(float targetAngle)  // Absolute output angle, NOT A DELTA!!!!
 {
   float currentAnlge = motor.getPosition() / TICKS_PER_LIFT_OUTPUT_DEGREE;
   float angleToGo = targetAngle - currentAnlge; 
@@ -89,6 +89,8 @@ void updateBlueMotorPower_TargetMode(float deltaDegrees, int maxPower)
 {
   int16_t outPow = (int16_t)(deltaDegrees * LIFT_KP);
   motor.setEffort(outPow);
+  Serial.print("Blue Power: ");
+  Serial.println(outPow);
 }
 
 void updateOpMode()
@@ -119,7 +121,7 @@ void updateOpMode()
     break;
   case Operating_Paused:
     driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_Holding; // if the plate's being held, keep holding! if its not, still keep holding!
+    blueMotorState = MotorState_Idle; // if the plate's being held, keep holding! if its not, still keep holding!
 
     // poll for resume signal
     if (pollForSignal(IR_BUTTON_RESUME))
@@ -173,6 +175,7 @@ void updateMotors()
     chassis.leftMotor.setMotorEffort(0);
     chassis.rightMotor.setMotorEffort(0);
     break;
+  break;
   case MotorState_ToTarget:
     // proportional control w/variable setpoint (moving right round baby right round)
     {
@@ -223,11 +226,12 @@ void updateMotors()
     // proportional control w/constant setpoint (actively holding)
     // TODO: make this actually actively hold
     motor.setEffort(0);
-    break;
     
+    break;
+  break;
   case MotorState_ToTarget:
     // proportional control w/variable setpoint (moving right round baby right round)
-    {
+    { 
       blueMotorCurrentTicks = motor.getPosition();
       float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
       updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
@@ -237,8 +241,8 @@ void updateMotors()
         liftMovementDone = true;
       }
     }
-    // Serial.print("Left Delta: ");
-    // Serial.println(leftDelta);
+    // Serial.print("Angle: ");
+    // Serial.println(((float) blueMotorCurrentTicks) / ((float)TICKS_PER_LIFT_OUTPUT_DEGREE));
     break;
   case MotorState_LineFollow:
   {
@@ -267,10 +271,10 @@ void doChallenge()
   {
   case Challenge_010_StartPreTurn:
   {
-    driveMotorState = MotorState_ToTarget;
+    driveMotorState = MotorState_Idle; // TODO: CHANGE THIS
     blueMotorState = MotorState_ToTarget;
     setTicksAtAngleDrive(90);
-    setTicksAtAnlgeLift(90);
+    setTicksAtAngleLift(ROOF_45_ANGLE);
     driveMovementDone = false;
     challengeState = Challenge_011_WaitForTurn;
     // Serial.println("010 - Starting Pre Turn");
@@ -279,7 +283,7 @@ void doChallenge()
 
   case Challenge_011_WaitForTurn:
   {
-    driveMotorState = MotorState_ToTarget;
+    driveMotorState = MotorState_Idle; // TODO: CHANGE THIS
     blueMotorState = MotorState_ToTarget;
     // Serial.println("011 - Wait For Turn");
     if (driveMovementDone)
