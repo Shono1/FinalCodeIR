@@ -41,9 +41,12 @@ void setTicksAtAngleDrive(float targetAngle) // Angle direction is determined by
   // return motorTargets;
 }
 
-void setTicksAtAnlgeLift(float targetAngle) 
+void setTicksAtAnlgeLift(float targetAngle)  // Absolute output angle, NOT A DELTA!!!!
 {
-  int ticksToGo = targetAngle 
+  float currentAnlge = motor.getPosition() / TICKS_PER_LIFT_OUTPUT_DEGREE;
+  float angleToGo = targetAngle - currentAnlge; 
+  int ticksToGo = angleToGo * TICKS_PER_LIFT_OUTPUT_DEGREE;
+  blueMotorTarget = motor.getPosition() + ticksToGo;
 }
 
 void setTicksAtDistance(float targetDistance) // Distance in cm, direction is determined by sign
@@ -85,6 +88,8 @@ void updateDriveMotorPower_Directly(Motor whichMotor, int power)
 void updateBlueMotorPower_TargetMode(float deltaDegrees, int maxPower)
 {
   int16_t outPow = (int16_t)(deltaDegrees * LIFT_KP);
+  Serial.println(outPow);
+  motor.setEffort(-400);
 }
 
 void updateOpMode()
@@ -174,17 +179,60 @@ void updateMotors()
     {
       leftDriveCurrentTicks = chassis.leftMotor.getCount();
       rightDriveCurrentTicks = chassis.rightMotor.getCount();
+      // blueMotorCurrentTicks = motor.getPosition();
       float leftDelta = (leftMotorTarget - leftDriveCurrentTicks) * chassis.cmPerEncoderTick;
       float rightDelta = (rightMotorTarget - rightDriveCurrentTicks) * chassis.cmPerEncoderTick;
-      float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
+      // float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
       updateDriveMotorPower_TargetMode(Motor_LeftDrive, leftDelta, maxDrivePower);
       updateDriveMotorPower_TargetMode(Motor_RightDrive, rightDelta, maxDrivePower);
-      updateDriveMotorPower_TargetMode(Motor_Blue, blueDelta, maxLiftPower);
+      // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
 
       if (abs(leftDelta) < DRIVE_TOLERANCE || abs(rightDelta) < DRIVE_TOLERANCE)
       {
         driveMovementDone = true;
       }
+      // if (blueDelta < LIFT_TOLERANCE)
+      // {
+      //   liftMovementDone = true;
+      // }
+    }
+    // Serial.print("Left Delta: ");
+    // Serial.println(leftDelta);
+    break;
+  case MotorState_LineFollow:
+  {
+    float leftColor = analogRead(LEFT_LINE_PIN);
+    float rightColor = analogRead(RIGHT_LINE_PIN);
+    float colorDelta = leftColor - rightColor;
+    updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+    updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
+
+    // Serial.print("Left Power: ");
+    // Serial.println(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+  }
+  break;
+  }
+
+  switch (blueMotorState)
+  {
+  case MotorState_Idle:
+    // zero effort, no control, just stop, hammertime
+    motor.setEffort(0);
+    break;
+
+  case MotorState_Holding:
+    // proportional control w/constant setpoint (actively holding)
+    // TODO: make this actually actively hold
+    motor.setEffort(0);
+    break;
+    
+  case MotorState_ToTarget:
+    // proportional control w/variable setpoint (moving right round baby right round)
+    {
+      blueMotorCurrentTicks = motor.getPosition();
+      float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
+      updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
+
       if (blueDelta < LIFT_TOLERANCE)
       {
         liftMovementDone = true;
@@ -230,9 +278,10 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
     setTicksAtAngleDrive(90);
+    setTicksAtAnlgeLift(90);
     driveMovementDone = false;
     challengeState = Challenge_011_WaitForTurn;
-    Serial.println("010 - Starting Pre Turn");
+    // Serial.println("010 - Starting Pre Turn");
   }
   break;
 
@@ -240,7 +289,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    Serial.println("011 - Wait For Turn");
+    // Serial.println("011 - Wait For Turn");
     if (driveMovementDone)
     {
       challengeState = Challenge_012_SearchForLine;
@@ -252,7 +301,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    Serial.println("012 - Search for Line");
+    // Serial.println("012 - Search for Line");
     setTicksAtAngleDrive(10);
     if (!leftBlackFlag)
     {
@@ -399,7 +448,8 @@ void setup()
   servo.setMinMaxMicroseconds(900, 2500); // 500 is closed, 2000 is opened
 
   operatingState = Operating_Idle;
-  challengeState = Challenge_040_ApproachPanel;
+  // challengeState = Challenge_040_ApproachPanel;
+  challengeState = Challenge_010_StartPreTurn;
   driveMotorState = MotorState_Idle;
   blueMotorState = MotorState_Idle;
 
