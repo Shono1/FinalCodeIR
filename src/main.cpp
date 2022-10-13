@@ -12,10 +12,15 @@
 int leftMotorTarget, rightMotorTarget, blueMotorTarget;
 int leftDriveCurrentTicks, rightDriveCurrentTicks, blueMotorCurrentTicks;
 int maxDrivePower, maxLiftPower;
+
 bool driveMovementDone = false;
 bool liftMovementDone = false;
+
 bool leftBlackFlag = false;
 bool rightBlackFlag = false;
+
+long gripperStartTime;
+long activeMovementStartTime;
 
 Chassis chassis;
 BlueMotor motor;
@@ -24,15 +29,33 @@ IRDecoder decoder(IR_REMOTE_PIN);
 Servo32U4 servo;
 Rangefinder rangefinder(RANGEFINDER_ECHO_PIN, RANGEFINDER_TRIG_PIN);
 
-void setTicksAtAngleDrive(float targetAngle);
-void setTicksAtDistance(float targetDistance);
+void setTicksAtAngleDrive(double targetAngle);
+void setTicksAtDistance(double targetDistance);
 void updateDriveMotorPower_TargetMode(Motor whichMotor, int deltaCM, int maxPower);
 void updateOpMode();
 void updateMotors();
 bool pollForSignal(int whichSignal);
 void doChallenge();
 
-void setTicksAtAngleDrive(float targetAngle) // Angle direction is determined by sign, positive is anticlockwise
+// bool turnForLine(bool cw) {
+//   setTicksAtAngleDrive()
+// }
+
+void openGripper() {
+  gripperStartTime = millis();
+  servo.writeMicroseconds(GRIPPER_OPEN_MS);
+}
+
+void closeGripper() {
+  gripperStartTime = millis();
+  servo.writeMicroseconds(500);
+}
+
+// void checkGripper() {
+
+// }
+
+void setTicksAtAngleDrive(double targetAngle) // Angle direction is determined by sign, positive is anticlockwise
 {
   int ticksToGo = targetAngle * (chassis.robotRadius * PI / 180.0) / chassis.cmPerEncoderTick;
   // int motorTargets[2]; // 0 is left, 1 is right
@@ -41,15 +64,27 @@ void setTicksAtAngleDrive(float targetAngle) // Angle direction is determined by
   // return motorTargets;
 }
 
-void setTicksAtAngleLift(float targetAngle)  // Absolute output angle, NOT A DELTA!!!!
+double blueAngleFromTicks(int16_t ticks)
 {
-  float currentAnlge = motor.getPosition() / TICKS_PER_LIFT_OUTPUT_DEGREE;
-  float angleToGo = targetAngle - currentAnlge; 
-  int ticksToGo = angleToGo * TICKS_PER_LIFT_OUTPUT_DEGREE;
+  double angle = ((double)ticks) / TICKS_PER_LIFT_OUTPUT_DEGREE;
+  return angle;
+}
+
+int16_t blueTicksFromAngle(double angle)
+{
+  int16_t ticks = (int16_t) (angle * TICKS_PER_LIFT_OUTPUT_DEGREE);
+  return ticks;
+}
+
+void setTicksAtAngleLift(double targetAngle)  // Absolute output angle, NOT A DELTA!!!!
+{
+  double currentAngle = blueAngleFromTicks(motor.getPosition());
+  double angleToGo = targetAngle - currentAngle; 
+  int16_t ticksToGo = blueTicksFromAngle(angleToGo);
   blueMotorTarget = motor.getPosition() + ticksToGo;
 }
 
-void setTicksAtDistance(float targetDistance) // Distance in cm, direction is determined by sign
+void setTicksAtDistance(double targetDistance) // Distance in cm, direction is determined by sign
 {
   int ticksToGo = targetDistance / chassis.cmPerEncoderTick;
   leftMotorTarget = chassis.leftMotor.getCount() + ticksToGo;
@@ -85,12 +120,12 @@ void updateDriveMotorPower_Directly(Motor whichMotor, int power)
   }
 }
 
-void updateBlueMotorPower_TargetMode(float deltaDegrees, int maxPower)
+void updateBlueMotorPower_TargetMode(double deltaDegrees, int maxPower)
 {
   int16_t outPow = (int16_t)(deltaDegrees * LIFT_KP);
   motor.setEffort(outPow);
-  Serial.print("Blue Power: ");
-  Serial.println(outPow);
+  // Serial.print("Blue Encoder: ");
+  // Serial.println(motor.getPosition());
 }
 
 void updateOpMode()
@@ -182,9 +217,9 @@ void updateMotors()
       leftDriveCurrentTicks = chassis.leftMotor.getCount();
       rightDriveCurrentTicks = chassis.rightMotor.getCount();
       // blueMotorCurrentTicks = motor.getPosition();
-      float leftDelta = (leftMotorTarget - leftDriveCurrentTicks) * chassis.cmPerEncoderTick;
-      float rightDelta = (rightMotorTarget - rightDriveCurrentTicks) * chassis.cmPerEncoderTick;
-      // float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
+      double leftDelta = (leftMotorTarget - leftDriveCurrentTicks) * chassis.cmPerEncoderTick;
+      double rightDelta = (rightMotorTarget - rightDriveCurrentTicks) * chassis.cmPerEncoderTick;
+      // double blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
       updateDriveMotorPower_TargetMode(Motor_LeftDrive, leftDelta, maxDrivePower);
       updateDriveMotorPower_TargetMode(Motor_RightDrive, rightDelta, maxDrivePower);
       // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
@@ -203,9 +238,9 @@ void updateMotors()
     break;
   case MotorState_LineFollow:
   {
-    float leftColor = analogRead(LEFT_LINE_PIN);
-    float rightColor = analogRead(RIGHT_LINE_PIN);
-    float colorDelta = leftColor - rightColor;
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
+    double colorDelta = leftColor - rightColor;
     updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
     updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
 
@@ -233,22 +268,61 @@ void updateMotors()
     // proportional control w/variable setpoint (moving right round baby right round)
     { 
       blueMotorCurrentTicks = motor.getPosition();
-      float blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
+      double blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
       updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
-
-      if (blueDelta < LIFT_TOLERANCE)
+      // Serial.print("Blue Motor Angle Delta: ");
+      // Serial.println(blueAngleFromTicks(blueDelta));
+      if (abs(blueAngleFromTicks(blueDelta)) < LIFT_TOLERANCE)
       {
         liftMovementDone = true;
       }
     }
     // Serial.print("Angle: ");
-    // Serial.println(((float) blueMotorCurrentTicks) / ((float)TICKS_PER_LIFT_OUTPUT_DEGREE));
+    // Serial.println(((double) blueMotorCurrentTicks) / ((double)TICKS_PER_LIFT_OUTPUT_DEGREE));
     break;
   case MotorState_LineFollow:
   {
     // unused mode
   }
   break;
+  }
+}
+
+void updateGripperState() {
+  switch(gripperState) {
+    case GripperState_Open:
+    {
+      servo.writeMicroseconds(GRIPPER_OPEN_MS);
+    }
+    break;
+
+    case GripperState_CommandClose:
+    {
+      Serial.println("Command CLose");
+      gripperStartTime = millis();
+      servo.writeMicroseconds(GRIPPER_CLOSED_MS);
+      gripperState = GripperState_Closing;
+    }
+    break;
+
+    case GripperState_Closing:
+    {
+      servo.writeMicroseconds(GRIPPER_CLOSED_MS);
+      if (millis() > gripperStartTime + GRIPPER_TIMEOUT) {
+        if (analogRead(GRIPPER_POT_PIN) > GRIPPER_CLOSED_POT) {
+          gripperState = GripperState_Open;
+        }
+        else {
+          gripperState = GripperState_Closed;
+        }
+      }
+    }
+    break;
+
+    case GripperState_Closed:
+    {
+      servo.writeMicroseconds(GRIPPER_CLOSED_MS);
+    }
   }
 }
 
@@ -271,11 +345,12 @@ void doChallenge()
   {
   case Challenge_010_StartPreTurn:
   {
-    driveMotorState = MotorState_Idle; // TODO: CHANGE THIS
-    blueMotorState = MotorState_ToTarget;
+    driveMotorState = MotorState_ToTarget; 
+    blueMotorState = MotorState_ToTarget; 
     setTicksAtAngleDrive(90);
-    setTicksAtAngleLift(ROOF_45_ANGLE);
+    setTicksAtAngleLift(ROOF_25_ANGLE);
     driveMovementDone = false;
+    liftMovementDone = false;
     challengeState = Challenge_011_WaitForTurn;
     // Serial.println("010 - Starting Pre Turn");
   }
@@ -283,8 +358,11 @@ void doChallenge()
 
   case Challenge_011_WaitForTurn:
   {
-    driveMotorState = MotorState_Idle; // TODO: CHANGE THIS
-    blueMotorState = MotorState_ToTarget;
+    // Serial.print("Gripper Pot: ");
+    // Serial.println(analogRead(18));
+    
+    driveMotorState = MotorState_ToTarget; 
+    blueMotorState = MotorState_ToTarget; 
     // Serial.println("011 - Wait For Turn");
     if (driveMovementDone)
     {
@@ -320,13 +398,14 @@ void doChallenge()
   {
     driveMotorState = MotorState_LineFollow;
     blueMotorState = MotorState_ToTarget;
-    float leftColor = analogRead(LEFT_LINE_PIN);
-    float rightColor = analogRead(RIGHT_LINE_PIN);
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
 
     if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
     {
       // driveMotorState = MotorState_ToTarget;
       // setTicksAtDistance(0);
+      Serial.println("Hit line crossing.");
       challengeState = Challenge_030_ForwardAtCross;
     }
   }
@@ -365,7 +444,7 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
     driveMovementDone = false;
-    setTicksAtAngleDrive(-60);
+    setTicksAtAngleDrive(60);
     challengeState = Challenge_033_WaitForTurnAtCross;
   }
   break;
@@ -388,19 +467,20 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    setTicksAtAngleDrive(-10);
-    if (!rightBlackFlag)
-    {
-      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
-    }
-    if (!leftBlackFlag && rightBlackFlag)
+    setTicksAtAngleDrive(10);
+    if (!leftBlackFlag)
     {
       leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
+    }
+    if (!rightBlackFlag && leftBlackFlag)
+    {
+      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
     }
 
     if (leftBlackFlag && rightBlackFlag)
     {
       setTicksAtAngleDrive(0);
+      liftMovementDone = false;
       challengeState = Challenge_040_ApproachPanel;
     }
   }
@@ -411,19 +491,115 @@ void doChallenge()
     driveMotorState = MotorState_LineFollow;
     blueMotorState = MotorState_ToTarget;
 
-    if (rangefinder.getDistance() < 20)
+    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
+      driveMotorState = MotorState_Idle;
+      // Serial.println("Drive Stopped Early");
+    }
+
+    if (liftMovementDone)
     {
-      operatingState = Operating_Done;
+      Serial.println("Beginning Final Approach");
+      activeMovementStartTime = millis();
+      challengeState = Challenge_041_FinalApproach;
     }
   }
   break;
 
-  case Challenge_050_BeginLift:
+  case Challenge_041_FinalApproach:
   {
     driveMotorState = MotorState_LineFollow;
     blueMotorState = MotorState_ToTarget;
+
+    // if (rangefinder.getDistance() < RANGE_LATE_APPROACH_TOWER) {
+    //   driveMotorState = MotorState_Idle;
+    //   Serial.println("Drive Stopped Late");
+    // }
+    // if (liftMovementDone) {
+    //   Serial.println("Lift movement complete.");
+    //   blueMotorState = MotorState_Idle;
+    //   challengeState = Challenge_042_WaitForGrip;
+    // }
+
+    if (millis() > activeMovementStartTime + FINAL_APPROACH_WAIT_TIME) {
+      Serial.println("Final Approach complete, waiting for grip signal...");
+      challengeState = Challenge_042_WaitForGrip;
+    }
   }
   break;
+
+  case Challenge_042_WaitForGrip:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_Idle;
+    if (pollForSignal(remote1)) {
+      challengeState = Challenge_043_GrabPlate;
+      gripperState = GripperState_CommandClose;
+      Serial.println("Gripper commanded to close.");
+    }
+  }
+  break;
+
+  case Challenge_043_GrabPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_Idle;
+    if (gripperState == GripperState_Closed) {
+      Serial.println("Gripper closed.");
+      liftMovementDone = false;
+      setTicksAtAngleLift(ROOF_25_LIFTED_ANGLE);
+      activeMovementStartTime = millis();
+      challengeState = Challenge_044_LiftBeforeBack;
+    }
+    else if (gripperState == GripperState_Open) {
+      Serial.println("Gripper failed to close.");
+      challengeState = Challenge_042_WaitForGrip;
+    }
+  }
+  break;
+
+  case Challenge_044_LiftBeforeBack:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    Serial.println("LiftingBeforeBacking");
+    if (liftMovementDone && (millis() > activeMovementStartTime + WAIT_FOR_GRIPPER_LIFT_TIME)) {
+      Serial.println("Lift movement complete, beginning to move backwards.");
+      setTicksAtDistance(-7);
+      driveMovementDone = false;
+      challengeState = Challenge_045_BackTime;
+    }
+  }
+  break;
+
+  case Challenge_045_BackTime:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (driveMovementDone == true)
+    {
+      Serial.println("Finished Reversing.");
+      challengeState = Challenge_050_TurnOffLine;
+    }
+  }
+  break;
+
+  case Challenge_050_TurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    setTicksAtAngleDrive(90);
+
+  }
+  break;
+
+  // case Challenge_051_WaitForGrab:
+  // {
+  //   // Wait for IR signal to grab
+  // }
+  // break;
+
+
 
   default:
   {
@@ -448,6 +624,7 @@ void setup()
   challengeState = Challenge_010_StartPreTurn;
   driveMotorState = MotorState_Idle;
   blueMotorState = MotorState_Idle;
+  gripperState = GripperState_Open;
 
   maxDrivePower = BASE_MAX_DRIVE_POWER;
   maxLiftPower = BASE_MAX_LIFT_POWER;
@@ -462,4 +639,5 @@ void loop()
 {
   updateOpMode();
   updateMotors();
+  updateGripperState();
 }
