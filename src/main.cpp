@@ -298,7 +298,7 @@ void updateGripperState() {
 
     case GripperState_CommandClose:
     {
-      Serial.println("Command CLose");
+      Serial.println("Command Close");
       gripperStartTime = millis();
       servo.writeMicroseconds(GRIPPER_CLOSED_MS);
       gripperState = GripperState_Closing;
@@ -587,19 +587,86 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-
+    driveMovementDone = false;
     setTicksAtAngleDrive(90);
-
+    challengeState = Challenge_051_WaitForTurnOffLine;
   }
   break;
 
-  // case Challenge_051_WaitForGrab:
-  // {
-  //   // Wait for IR signal to grab
-  // }
-  // break;
+  case Challenge_051_WaitForTurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (driveMovementDone) {
+      challengeState = Challenge_052_SearchForLine;
+      leftBlackFlag = false;
+      rightBlackFlag = false;
+    }
+  }
+  break;
 
+  case Challenge_052_SearchForLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    setTicksAtAngleDrive(10);
+    if (!leftBlackFlag)
+    {
+      leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
+    }
+    if (!rightBlackFlag && leftBlackFlag)
+    {
+      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
+    }
 
+    if (leftBlackFlag && rightBlackFlag)
+    {
+      challengeState = Challenge_060_FollowLineUntilBox;
+      activeMovementStartTime = millis();
+      setTicksAtAngleDrive(0);
+    }
+  }
+  break;
+
+  case Challenge_060_FollowLineUntilBox:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
+
+    if (millis() > activeMovementStartTime + FOLLOW_LINE_TILL_POINTED_AT_BOX_TIME)
+    {
+      setTicksAtAngleLift(0);
+      liftMovementDone = false;
+      challengeState = Challenge_061_LowerArmForBox;
+    }
+  }
+  break;
+
+  case Challenge_061_LowerArmForBox:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    if (liftMovementDone)
+    {
+      Serial.println("Finished Lowering the Arm");
+      setTicksAtDistance(0);
+      driveMovementDone = false;
+      challengeState = Challenge_062_MoveToBox;
+    }
+  }
+  break;
+
+  case Challenge_062_MoveToBox:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (driveMovementDone)
+    {
+      Serial.println("Finished Move to Box.");
+      operatingState = Operating_Done;
+    }
+  }
+  break;
 
   default:
   {
