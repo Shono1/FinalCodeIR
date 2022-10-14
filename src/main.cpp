@@ -737,8 +737,10 @@ void doChallenge()
 
   case Challenge_05a_ReverseUntilLine:
   {
-    driveMotorState = MotorState_LineFollowReverse;
+    driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
+
+    setTicksAtDistance(-100);
 
     double leftColor = analogRead(LEFT_LINE_PIN);
     double rightColor = analogRead(RIGHT_LINE_PIN);
@@ -746,7 +748,7 @@ void doChallenge()
     if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
     {
       // driveMotorState = MotorState_ToTarget;
-      // setTicksAtDistance(0);
+      setTicksAtDistance(0);
       Serial.println("Hit line crossing.");
       // challengeState = nextState;
       challengeState = Challenge_05b_DrivePastCross;
@@ -803,22 +805,6 @@ void doChallenge()
     driveMotorState = MotorState_LineFollow;
     blueMotorState = MotorState_Idle;
 
-    // Serial.print("Rangefinder Distance: ");
-    // Serial.println(rangefinder.getDistance());
-
-    // // if (millis() > activeMovementStartTime + FOLLOW_LINE_TILL_POINTED_AT_BOX_TIME)
-    // // {
-    // //   setTicksAtAngleLift(0);
-    // //   liftMovementDone = false;
-    // //   challengeState = Challenge_061_LowerArmForBox;
-    // // }
-    // if (driveMovementDone) {
-    //   setTicksAtAngleLift(-2);
-    //   liftMovementDone = false;
-    //   challengeState = Challenge_061_LowerArmForBox;
-      
-    // }
-
     if (rangefinder.getDistance() < TRANSFER_DROPOFF_OFFSET) {
       challengeState = Challenge_061_LowerArmForBox;
       setTicksAtAngleLift(TRANSFER_DROPOFF_LIFT_ANGLE);
@@ -837,10 +823,22 @@ void doChallenge()
       Serial.println("Finished Lowering the Arm");
       setTicksAtDistance(0);
       driveMovementDone = false;
-      challengeState = Challenge_062_WaitForOpen;
-      gripperState = GripperState_Open;
+      // challengeState = Challenge_062_WaitForOpen;
+      challengeState = Challenge_06a_WaitBeforeReleasing;
+      // gripperState = GripperState_Open;
       setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
       liftMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_06a_WaitBeforeReleasing:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    if (pollForSignal(remote3)) {
+      gripperState = GripperState_Open;
+      challengeState = Challenge_062_WaitForOpen;
     }
   }
   break;
@@ -1097,6 +1095,14 @@ void doChallenge()
     blueMotorState = MotorState_ToTarget;
 
     if (liftMovementDone) {
+      challengeState = Challenge_09a_LiftDelay;
+    }
+  }
+  break;
+
+  case Challenge_09a_LiftDelay:
+  {
+    if (pollForSignal(remote1)) {
       challengeState = Challenge_094_Release;
     }
   }
@@ -1125,16 +1131,18 @@ void doChallenge()
 
   case Challenge_100_ReverseUntilLine:
   {
-    driveMotorState = MotorState_LineFollowReverse;
+    driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
     double leftColor = analogRead(LEFT_LINE_PIN);
     double rightColor = analogRead(RIGHT_LINE_PIN);
 
+    setTicksAtDistance(-100);
+
     if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
     {
       // driveMotorState = MotorState_ToTarget;
-      // setTicksAtDistance(0);
+      setTicksAtDistance(0);
       Serial.println("Hit line crossing.");
       // challengeState = nextState;
       challengeState = Challenge_101_DrivePastCross;
@@ -1486,8 +1494,10 @@ case Challenge_124_DriveOverCross:
 
   case Challenge_140_ReverseUntilLine:
   {
-    driveMotorState = MotorState_LineFollowReverse;
+    driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
+
+    setTicksAtDistance(-100);
 
     double leftColor = analogRead(LEFT_LINE_PIN);
     double rightColor = analogRead(RIGHT_LINE_PIN);
@@ -1495,7 +1505,7 @@ case Challenge_124_DriveOverCross:
     if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
     {
       // driveMotorState = MotorState_ToTarget;
-      // setTicksAtDistance(0);
+      setTicksAtDistance(0);
       Serial.println("Hit line crossing.");
       // challengeState = nextState;
       challengeState = Challenge_141_DrivePastCross;
@@ -1570,10 +1580,21 @@ case Challenge_124_DriveOverCross:
       Serial.println("Finished Lowering the Arm");
       setTicksAtDistance(0);
       driveMovementDone = false;
-      challengeState = Challenge_152_WaitForOpen;
+      challengeState = Challenge_15a_WaitBeforeReleasing;
       gripperState = GripperState_Open;
       setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
       liftMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_15a_WaitBeforeReleasing:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    if (pollForSignal(remote3)) {
+      gripperState = GripperState_Open;
+      challengeState = Challenge_152_WaitForOpen;
     }
   }
   break;
@@ -1779,103 +1800,115 @@ case Challenge_124_DriveOverCross:
   break;
 
 // ----------------------- DONE LINE ^^^^^^^^^^^^^^^^^^^^^^^^^ -------------------------------------------
-  // case Challenge_090_BeginApproach:
-  // {
-  //   driveMotorState = MotorState_LineFollow;
-  //   blueMotorState = MotorState_ToTarget;
+  case Challenge_180_BeginApproach:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
 
-  //   if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
-  //     driveMotorState = MotorState_Idle;
-  //     // Serial.println("Drive Stopped Early");
-  //   }
+    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
+      driveMotorState = MotorState_Idle;
+      // Serial.println("Drive Stopped Early");
+    }
 
-  //   if (liftMovementDone)
-  //   {
-  //     Serial.println("Beginning Final Approach");
-  //     activeMovementTimeElapsed = 0;
-  //     activeMovementLastMillis = millis();
-  //     challengeState = Challenge_091_FinalApproach;
-  //   }
-  // }
-  // break;
+    if (liftMovementDone)
+    {
+      Serial.println("Beginning Final Approach");
+      activeMovementTimeElapsed = 0;
+      activeMovementLastMillis = millis();
+      challengeState = Challenge_181_FinalApproach;
+    }
+  }
+  break;
 
-  // case Challenge_091_FinalApproach:
-  // {
-  //   driveMotorState = MotorState_LineFollow;
-  //   blueMotorState = MotorState_ToTarget;
+  case Challenge_181_FinalApproach:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
 
-  //   activeMovementTimeElapsed += millis() - activeMovementLastMillis;
-  //   activeMovementLastMillis = millis(); 
+    activeMovementTimeElapsed += millis() - activeMovementLastMillis;
+    activeMovementLastMillis = millis(); 
 
-  //   if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME) {
-  //     Serial.println("Final Approach complete, waiting for grip signal...");
-  //     challengeState = Challenge_092_FinalLift;
-  //   }
-  // }
-  // break;
+    if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME) {
+      Serial.println("Final Approach complete, waiting for grip signal...");
+      challengeState = Challenge_182_FinalLift;
+    }
+  }
+  break;
   
-  // case Challenge_092_FinalLift:
-  // {
-  //   driveMotorState = MotorState_Idle;
-  //   blueMotorState = MotorState_ToTarget;
+  case Challenge_182_FinalLift:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
     
-  //   setTicksAtAngleLift(ROOF_25_FINAL_ANGLE);
-  //   liftMovementDone = false;
-  //   challengeState = Challenge_093_WaitForFinalLift;
-  // }
-  // break;
+    setTicksAtAngleLift(ROOF_45_FINAL_ANGLE);
+    liftMovementDone = false;
+    challengeState = Challenge_183_WaitForFinalLift;
+  }
+  break;
 
-  // case Challenge_093_WaitForFinalLift:
-  // {
-  //   driveMotorState = MotorState_Idle;
-  //   blueMotorState = MotorState_ToTarget;
+  case Challenge_183_WaitForFinalLift:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
 
-  //   if (liftMovementDone) {
-  //     challengeState = Challenge_094_Release;
-  //   }
-  // }
-  // break;
+    if (liftMovementDone) {
+      challengeState = Challenge_18a_DelayRelease;
+    }
+  }
+  break;
 
-  // case Challenge_094_Release:
-  // {
-  //   driveMotorState = MotorState_Idle;
-  //   blueMotorState = MotorState_ToTarget;
+  case Challenge_18a_DelayRelease:
+  {
+    if (pollForSignal(remote1)) {
+      challengeState = Challenge_184_Release;
+    }
+  }
+  break;
 
-  //   gripperState = GripperState_Open;
-  //   challengeState = Challenge_095_WaitForRelease;
-  // }
-  // break;
+  case Challenge_184_Release:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
 
-  // case Challenge_095_WaitForRelease:
-  // {
-  //   driveMotorState = MotorState_Idle;
-  //   blueMotorState = MotorState_ToTarget;
-  //   if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 40) {
-  //     challengeState = Challenge_100_ReverseUntilLine;
-  //     driveMovementDone = false;
-  //   }
-  // }
-  // break;
+    gripperState = GripperState_Open;
+    challengeState = Challenge_185_WaitForRelease;
+  }
+  break;
 
-  // case Challenge_100_ReverseUntilLine:
-  // {
-  //   driveMotorState = MotorState_LineFollowReverse;
-  //   blueMotorState = MotorState_ToTarget;
+  case Challenge_185_WaitForRelease:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 40) {
+      challengeState = Challenge_190_ReverseUntilLine;
+      driveMovementDone = false;
+    }
+  }
+  break;
 
-  //   double leftColor = analogRead(LEFT_LINE_PIN);
-  //   double rightColor = analogRead(RIGHT_LINE_PIN);
+  case Challenge_190_ReverseUntilLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    setTicksAtDistance(-100);
 
-  //   if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
-  //   {
-  //     // driveMotorState = MotorState_ToTarget;
-  //     // setTicksAtDistance(0);
-  //     Serial.println("Hit line crossing.");
-  //     // challengeState = nextState;
-  //     challengeState = Challenge_101_DrivePastCross;
-  //   }
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
 
-  // }
-  // break;
+    if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+    {
+      // driveMotorState = MotorState_ToTarget;
+      setTicksAtDistance(0);
+      Serial.println("Hit line crossing.");
+      // challengeState = nextState;
+      // challengeState = -1;
+      driveMotorState = MotorState_Idle;
+      blueMotorState = MotorState_Idle;
+      operatingState = Operating_Done;
+    }
+
+  }
+  break;
 
 
 

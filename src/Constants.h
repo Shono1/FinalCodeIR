@@ -5,7 +5,7 @@
 #define RANGEFINDER_TRIG_PIN 12
 #define GRIPPER_POT_PIN 18
 
-#define DRIVE_KP 50
+#define DRIVE_KP 100
 // TODO: Tune liftKP
 #define LIFT_KP 1
 #define BASE_MAX_DRIVE_POWER 80
@@ -37,10 +37,10 @@
 #define ROOF_25_ANGLE 135
 #define ROOF_25_LIFTED_ANGLE 95
 #define ROOF_25_FINAL_ANGLE 122
-#define ROOF_45_ANGLE 87
 
 #define ROOF_45_ANGLE 56
-#define ROOF_45_LIFTED_ANGLE 78
+#define ROOF_45_FINAL_ANGLE 50
+#define ROOF_45_LIFTED_ANGLE 70
 
 #define GRIPPER_TIMEOUT 2000
 #define GRIPPER_OPEN_MS 2800
@@ -104,6 +104,7 @@ enum ChallengeState
   Challenge_05f_SearchForLine,
   Challenge_060_FollowLineUntilBox,
   Challenge_061_LowerArmForBox,
+  Challenge_06a_WaitBeforeReleasing,
   Challenge_062_WaitForOpen,
   Challenge_063_BackOffPlatform,
   Challenge_064_WaitForBackOff,
@@ -127,6 +128,7 @@ enum ChallengeState
   Challenge_091_FinalApproach,
   Challenge_092_FinalLift,
   Challenge_093_WaitForFinalLift,
+  Challenge_09a_LiftDelay,
   Challenge_094_Release,
   Challenge_095_WaitForRelease,
   Challenge_100_ReverseUntilLine,
@@ -166,6 +168,7 @@ enum ChallengeState
   Challenge_145_SearchForLine,
   Challenge_150_FollowLineUntilBox,
   Challenge_151_LowerArmForBox,
+  Challenge_15a_WaitBeforeReleasing,
   Challenge_152_WaitForOpen,
   Challenge_153_BackOffPlatform,
   Challenge_154_WaitForBackOff,
@@ -189,6 +192,7 @@ enum ChallengeState
   Challenge_181_FinalApproach,
   Challenge_182_FinalLift,
   Challenge_183_WaitForFinalLift,
+  Challenge_18a_DelayRelease,
   Challenge_184_Release,
   Challenge_185_WaitForRelease,
   Challenge_190_ReverseUntilLine
