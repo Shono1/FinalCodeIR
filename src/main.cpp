@@ -849,7 +849,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10 && liftMovementDone) {
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 40 && liftMovementDone) {
       challengeState = Challenge_063_BackOffPlatform;
       driveMovementDone = false;
     }
@@ -1116,7 +1116,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10) {
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 40) {
       challengeState = Challenge_100_ReverseUntilLine;
       driveMovementDone = false;
     }
@@ -1381,6 +1381,8 @@ case Challenge_124_DriveOverCross:
     blueMotorState = MotorState_ToTarget;
 
     if (waitForDriveMovement(Challenge_127_SearchForLine)) {
+      leftBlackFlag = false;
+      rightBlackFlag = false;
       setTicksAtDistance(0);
     }
   }
@@ -1482,7 +1484,7 @@ case Challenge_124_DriveOverCross:
   }
   break;
 
-   case Challenge_140_ReverseUntilLine:
+  case Challenge_140_ReverseUntilLine:
   {
     driveMotorState = MotorState_LineFollowReverse;
     blueMotorState = MotorState_ToTarget;
@@ -1520,7 +1522,7 @@ case Challenge_124_DriveOverCross:
 
   case Challenge_143_TurnOffLine:
   {
-    turnOffLine(Challenge_144_WaitForTurnOffLine, true);
+    turnOffLine(Challenge_144_WaitForTurnOffLine, false);
   }
   break;
 
@@ -1580,7 +1582,7 @@ case Challenge_124_DriveOverCross:
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10 && liftMovementDone) {
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 40 && liftMovementDone) {
       challengeState = Challenge_153_BackOffPlatform;
       driveMovementDone = false;
     }
@@ -1686,96 +1688,97 @@ case Challenge_124_DriveOverCross:
   }
   break;
 
-  case Challenge_080_TurnOffLine:
+  case Challenge_170_TurnOffLine:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    turnOffLine(Challange_081_WaitForTurnOffLine, true);
-    setTicksAtAngleLift(ROOF_25_LIFTED_ANGLE);
+    turnOffLine(Challange_171_WaitForTurnOffLine, false);
+    setTicksAtAngleLift(ROOF_45_LIFTED_ANGLE);
   }
   break;
 
-  case Challange_081_WaitForTurnOffLine:
+  case Challange_171_WaitForTurnOffLine:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    if (waitForDriveMovement(Challenge_082_SearchForLine)) {
+    if (waitForDriveMovement(Challenge_172_SearchForLine)) {
       leftBlackFlag = false;
       rightBlackFlag = false;
     }
   }
   break;
 
-  case Challenge_082_SearchForLine:
+  case Challenge_172_SearchForLine:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    if(searchForLine(true)) {
+    if(searchForLine(false)) {
       rightBlackFlag = false;
       leftBlackFlag = false;
-      challengeState = Challenge_083_DriveUntilCross;
+      challengeState = Challenge_173_DriveUntilCross;
     }
 
   }
   break;
 
-  case Challenge_083_DriveUntilCross:
+  case Challenge_173_DriveUntilCross:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    driveToCross(Challenge_084_DrivePastCross);
+    driveToCross(Challenge_174_DrivePastCross);
   }
   break;
 
-  case Challenge_084_DrivePastCross:
+  case Challenge_174_DrivePastCross:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    drivePastCross(Challenge_085_WaitForDrivePastCross);
+    drivePastCross(Challenge_175_WaitForDrivePastCross);
   }
   break;
 
-  case Challenge_085_WaitForDrivePastCross:
+  case Challenge_175_WaitForDrivePastCross:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    waitForDriveMovement(Challenge_086_TurnOffLine);
+    waitForDriveMovement(Challenge_176_TurnOffLine);
   }
   break;
 
-  case Challenge_086_TurnOffLine:
+  case Challenge_176_TurnOffLine:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    turnOffLine(Challenge_087_WaitForTurnOffLine, true);
+    turnOffLine(Challenge_177_WaitForTurnOffLine, false);
     driveMovementDone = false;
   }
   break;
 
-  case Challenge_087_WaitForTurnOffLine:
+  case Challenge_177_WaitForTurnOffLine:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    waitForDriveMovement(Challenge_088_SearchForLine);
+    waitForDriveMovement(Challenge_178_SearchForLine);
     rightBlackFlag = false;
     leftBlackFlag = false;
   }
   break;
 
-  case Challenge_088_SearchForLine:
+  case Challenge_178_SearchForLine:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if (searchForLine(true))
+    if (searchForLine(false))
     {
-      challengeState = Challenge_090_BeginApproach;
+      challengeState = Challenge_180_BeginApproach;
     }
   }
   break;
 
+// ----------------------- DONE LINE ^^^^^^^^^^^^^^^^^^^^^^^^^ -------------------------------------------
   // case Challenge_090_BeginApproach:
   // {
   //   driveMotorState = MotorState_LineFollow;
@@ -1847,7 +1850,7 @@ case Challenge_124_DriveOverCross:
   // {
   //   driveMotorState = MotorState_Idle;
   //   blueMotorState = MotorState_ToTarget;
-  //   if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10) {
+  //   if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 40) {
   //     challengeState = Challenge_100_ReverseUntilLine;
   //     driveMovementDone = false;
   //   }
