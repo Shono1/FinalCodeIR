@@ -54,6 +54,8 @@
 
 #define TRANSFER_DROPOFF_OFFSET 10.795
 #define TRANSFER_DROPOFF_LIFT_ANGLE -4
+#define TRANSFER_BACKOFF -6
+#define LIFT_ANGLE_AT_PICKUP 3
 
 enum OperatingState
 {
@@ -93,7 +95,17 @@ enum ChallengeState
   Challenge_05f_SearchForLine,
   Challenge_060_FollowLineUntilBox,
   Challenge_061_LowerArmForBox,
-  Challenge_062_MoveToBox
+  Challenge_062_WaitForOpen,
+  Challenge_063_BackOffPlatform,
+  Challenge_064_WaitForBackOff,
+  Challenge_070_WaitForNewPlate,
+  Challenge_071_GoToNewPlate,
+  Challenge_072_WaitForGoToNewPlate,
+  Challenge_073_GrabNewPlate,
+  Challenge_074_WaitForGrab,
+  Challenge_075_BackUp,
+  Chllanege_076_WaitForBackUp,
+  Challenge_080_TurnOffLine
   // Challenge_051_WaitForStartGrab,
   // Challenge_052_WaitForEndGrab,
   // Challenge_053_LiftAndBack,

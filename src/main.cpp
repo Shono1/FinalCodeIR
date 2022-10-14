@@ -802,22 +802,83 @@ void doChallenge()
       Serial.println("Finished Lowering the Arm");
       setTicksAtDistance(0);
       driveMovementDone = false;
-      challengeState = Challenge_062_MoveToBox;
+      challengeState = Challenge_062_WaitForOpen;
+      gripperState = GripperState_Open;
     }
   }
   break;
 
-  case Challenge_062_MoveToBox:
+  case Challenge_062_WaitForOpen:
   {
-    driveMotorState = MotorState_ToTarget;
+    driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone)
-    {
-      Serial.println("Finished Move to Box.");
-      operatingState = Operating_Done;
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10) {
+      challengeState = Challenge_063_BackOffPlatform;
+      driveMovementDone = false;
     }
   }
   break;
+
+  case Challenge_063_BackOffPlatform:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveMovementDone = false;
+    setTicksAtDistance(TRANSFER_BACKOFF);
+    challengeState = Challenge_064_WaitForBackOff;
+  } 
+  break;
+
+  case Challenge_064_WaitForBackOff:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (waitForDriveMovement(Challenge_070_WaitForNewPlate)) {
+      setTicksAtDistance(0);
+      driveMotorState = MotorState_Idle;
+      challengeState = Challenge_070_WaitForNewPlate;
+    }
+  }
+  break;
+
+  case Challenge_070_WaitForNewPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
+    if (pollForSignal(remote2)) {
+      challengeState = Challenge_071_GoToNewPlate;
+    }
+  }
+  break;
+
+  case Challenge_071_GoToNewPlate:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveMovementDone = false;
+    setTicksAtDistance(-TRANSFER_BACKOFF);
+    challengeState = Challenge_072_WaitForGoToNewPlate;
+  }
+  break;
+
+  case Challenge_072_WaitForGoToNewPlate:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (waitForDriveMovement(Challenge_073_GrabNewPlate)) {
+      setTicksAtDistance(0);
+    }
+  }
+  break;
+
+  case Challenge_073_GrabNewPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_Idle;
+
+    gripperState = GripperState_CommandClose;
+  }
 
   default:
   {
@@ -839,7 +900,8 @@ void setup()
 
   operatingState = Operating_Idle;
   // challengeState = Challenge_040_ApproachPanel;
-  challengeState = Challenge_010_StartPreTurn;
+  //challengeState = Challenge_010_StartPreTurn;
+  challengeState = Challenge_070_WaitForNewPlate;
   driveMotorState = MotorState_Idle;
   blueMotorState = MotorState_Idle;
   gripperState = GripperState_Open;
