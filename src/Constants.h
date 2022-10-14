@@ -5,7 +5,7 @@
 #define RANGEFINDER_TRIG_PIN 12
 #define GRIPPER_POT_PIN 18
 
-#define DRIVE_KP 100
+#define DRIVE_KP 75
 // TODO: Tune liftKP
 #define LIFT_KP 1
 #define BASE_MAX_DRIVE_POWER 80
