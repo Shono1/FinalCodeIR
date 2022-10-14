@@ -8,6 +8,7 @@
 #define DRIVE_KP 50
 // TODO: Tune liftKP
 #define LIFT_KP 1
+#define MAX_POWER 400
 #define BASE_MAX_DRIVE_POWER 120
 #define BASE_MAX_LIFT_POWER 400
 #define DRIVE_TOLERANCE 1

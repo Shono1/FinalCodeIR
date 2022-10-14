@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <BlueMotor.h>
 #include <Romi32U4.h>
+#include "Constants.h"
 
 long oldValue = 0;
 long newValue;
@@ -113,7 +114,12 @@ void BlueMotor::setEffortDB(float effort, bool clockwise)
         digitalWrite(AIN2, HIGH);
         //float outeff = effort*0.15 - 347;
     }
-    OCR1C = constrain(effort, 0, 400);
+    if (effort == 0)
+    {
+        OCR1C = 0;
+    } else {
+        OCR1C = constrain(effort, LIFT_DEADBAND, 400);
+    }
     //setEffort(outeff);
 }
 
