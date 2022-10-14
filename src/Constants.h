@@ -1,4 +1,4 @@
- 
+#pragma once
 
 #define IR_REMOTE_PIN 14
 #define RANGEFINDER_ECHO_PIN 17
@@ -10,10 +10,9 @@
 #define LIFT_KP 1
 #define BASE_MAX_DRIVE_POWER 120
 #define BASE_MAX_LIFT_POWER 400
-#define DRIVE_TOLERANCE 0.5
+#define DRIVE_TOLERANCE 1
 // TODO: CALCULATE LIFT TOLERANCE
 #define LIFT_TOLERANCE 3
-// TODO: Calculate BOTH deadbands
 #define DRIVE_DEADBAND 50 
 #define LIFT_DEADBAND 350
 #define TICKS_PER_LIFT_OUTPUT_DEGREE 96
@@ -36,10 +35,11 @@
 #define TRANSFER_BLOCK_ANGLE 0
 #define ROOF_25_ANGLE 135
 #define ROOF_25_LIFTED_ANGLE 95
+#define ROOF_25_FINAL_ANGLE 122
 #define ROOF_45_ANGLE 87
 
 #define GRIPPER_TIMEOUT 2000
-#define GRIPPER_OPEN_MS 2500
+#define GRIPPER_OPEN_MS 2800
 #define GRIPPER_OPEN_POT 440
 #define GRIPPER_CLOSED_MS 500
 #define GRIPPER_CLOSED_POT 215
@@ -55,7 +55,7 @@
 #define TRANSFER_DROPOFF_OFFSET 10.795
 #define TRANSFER_DROPOFF_LIFT_ANGLE -4
 #define TRANSFER_BACKOFF -6
-#define LIFT_ANGLE_AT_PICKUP 3
+#define LIFT_ANGLE_AT_PICKUP 2
 
 enum OperatingState
 {
@@ -113,45 +113,24 @@ enum ChallengeState
   Challenge_085_WaitForDrivePastCross,
   Challenge_086_TurnOffLine,
   Challenge_087_WaitForTurnOffLine,
-  Challenge_090_BeginApproach
-  // Challenge_051_WaitForStartGrab,
-  // Challenge_052_WaitForEndGrab,
-  // Challenge_053_LiftAndBack,
-  // Challenge_060_TurnAround,
-  // Challenge_061_DriveToCross,
-  // Challenge_062_ForwardOverCross,
-  // Challenge_063_TurnAtCross,
-  // Challenge_064_BackToTransfer,
-  // Challenge_065_FinalLoweringStage,
-  // Challenge_066_ReleaseAtBlock,
-  // Challenge_070_WaitForNewPlate,
-  // Challenge_071_GrabNewPlate,
-  // Challenge_080_TurnAround,
-  // Challenge_081_DriveToCross,
-  // Challenge_082_DrivePastCross,
-  // Challenge_083_TurnTowardRoof,
-  // Challenge_090_DriveToRoof,
-  // Challenge_091_FinalApproach,
-  // Challenge_092_WaitForRelease,
-  // Challenge_093_WaitForReleaseFinish,
-  // Challenge_100_BackOffRoof,
-  // Challenge_101_TurnAround,
-  // Challenge_102_DriveToCross,
-  // Challenge_103_DriveOverCross,
-  // Challenge_104_FindLine,
-  // Challenge_105_DriveDownOffset,
-  // Challenge_106_DriveUntilFarLine,
-  // Challenge_111_DrivePastLine,
-  // Challenge_112_FindLine,
-  // Challenge_113_DriveToCross,
-  // Challenge_114_DrivePastCross,
-  // Challenge_115_TurnToLine,
-  // Challenge_110_HeadToSecondRoof,
-  // Challenge_120_RemoveSecondPlate,
-  // Challenge_130_DepositSeondPlate,
-  // Challenge_140_WaitForNewPlate,
-  // Challenge_150_HeadBackToSecondRoof,
-  // Challenge_160_ReplaceNewPlate
+  Challenge_088_SearchForLine,
+  Challenge_090_BeginApproach,
+  Challenge_091_FinalApproach,
+  Challenge_092_FinalLift,
+  Challenge_093_WaitForFinalLift,
+  Challenge_094_Release,
+  Challenge_095_WaitForRelease,
+  Challenge_100_ReverseUntilLine,
+  Challenge_101_DrivePastCross,
+  Challenge_102_WaitForDrivePastCross,
+  Challenge_103_TurnOffLine,
+  Challenge_104_WaitForTurnOffLine,
+  Challenge_105_SearchForLine,
+  Challenge_110_GoToBlock,
+  Challenge_111_WaitForGoToBlock,
+  Challenge_112_TurnTowardsOtherSide,
+  Challenge_113_WaitForTurn,
+  Challenge_114_GunIt
 } challengeState;
 
 enum MotorState
@@ -161,7 +140,8 @@ enum MotorState
   MotorState_ToTarget,
   MotorState_LineFollow,
   MotorState_LineFollowReverse,
-  MotorState_LineFollowForDistance
+  MotorState_LineFollowForDistance,
+  MotorState_FreeDrive
 } driveMotorState,
     blueMotorState;
 
