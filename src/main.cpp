@@ -16,12 +16,15 @@ IRDecoder decoder(IR_REMOTE_PIN);
 Servo32U4 servo;
 Rangefinder rangefinder(RANGEFINDER_ECHO_PIN, RANGEFINDER_TRIG_PIN);
 
+int goalIndex = 0;
+
 int correctDrivePowerDeadband(int power)
 {
-    if (power == 0) {
+    if (power == 0)
+    {
         return 0;
     }
-    return map(power, 0, MAX_POWER, DRIVE_DEADBAND, MAX_POWER);
+    return map(abs(power), 0, MAX_POWER, DRIVE_DEADBAND, MAX_POWER) * (power / abs(power));
 }
 
 void setMotorPowers(int leftEffort, int rightEffort)
@@ -36,7 +39,8 @@ void setBluePower(int effort)
     {
         effort = -effort;
         motor.setEffortDB(effort, true);
-    } else
+    }
+    else
     {
         motor.setEffortDB(effort, false);
     }
@@ -49,8 +53,10 @@ void followLine(int speed)
     double colorDelta = leftColor - rightColor;
     if (speed < 0)
     {
-        setMotorPowers(speed + LINE_FOLLOW_KP * colorDelta, speed - LINE_FOLLOW_KP * colorDelta);
-    } else {
+        setMotorPowers(speed - LINE_FOLLOW_KP * colorDelta, speed + LINE_FOLLOW_KP * colorDelta);
+    }
+    else
+    {
         setMotorPowers(speed - LINE_FOLLOW_KP * colorDelta, speed + LINE_FOLLOW_KP * colorDelta);
     }
 }
@@ -77,19 +83,19 @@ double getRightMotorCM()
 
 double getBlueMotorAngle()
 {
-    return ((double) motor.getPosition()) / TICKS_PER_LIFT_OUTPUT_DEGREE;
+    return ((double)motor.getPosition()) / TICKS_PER_LIFT_OUTPUT_DEGREE;
 }
 
 class Goal
 {
-    public:
+public:
     virtual bool updateGoal() = 0; // false if goal incomplete, true if complete
 };
 
-class LineFollowUntilCrossing : Goal
+class LineFollowUntilCrossing : public Goal
 {
-    public:
-    LineFollowUntilCrossing(int commandedPower=BASE_MAX_DRIVE_POWER)
+public:
+    LineFollowUntilCrossing(int commandedPower = 50)
     {
         powerCommand = commandedPower;
     }
@@ -99,7 +105,7 @@ class LineFollowUntilCrossing : Goal
         followLine(powerCommand); // follow the line
 
         //  if both sensors detect a line
-        if (analogRead(LEFT_LINE_PIN ) > BLACK_THRESH && analogRead(RIGHT_LINE_PIN) > BLACK_THRESH)
+        if (analogRead(LEFT_LINE_PIN) > BLACK_THRESH && analogRead(RIGHT_LINE_PIN) > BLACK_THRESH)
         {
             stopMotors();
             return true; // done
@@ -108,18 +114,19 @@ class LineFollowUntilCrossing : Goal
         return false; // not done
     }
 
-    private:
+private:
     int powerCommand;
 };
 
-class LineFollowDistance : Goal
+class LineFollowDistance : public Goal
 {
-    public:
-    LineFollowDistance(double distance_cm)
+public:
+    LineFollowDistance(double distance_cm, int max_speed = 50)
     {
         targetDistance = distance_cm;
+        speedLimit = max_speed;
     }
-    
+
     bool updateGoal()
     {
         if (!gotStartingDistances)
@@ -130,28 +137,29 @@ class LineFollowDistance : Goal
         }
         double traveledDistance = ((getLeftMotorCM() - startLeft) + (getRightMotorCM() - startRight)) / 2;
         double deltaDistance = targetDistance - traveledDistance;
-        
+
         if (abs(deltaDistance) < DRIVE_TOLERANCE)
         {
             stopMotors();
             return true; // done motion
         }
-        
-        followLine(deltaDistance * DRIVE_KP);
+
+        followLine(constrain(deltaDistance * DRIVE_KP, -speedLimit, speedLimit));
         return false; // not done
     }
-    
-    private:
+
+private:
     double targetDistance;
+    int speedLimit;
     double startLeft = 0;
     double startRight = 0;
     bool gotStartingDistances = false;
 };
 
-class LineFollowTime : Goal
+class LineFollowTime : public Goal
 {
-    public:
-    LineFollowTime(double time_ms, int commandedPower=BASE_MAX_DRIVE_POWER)
+public:
+    LineFollowTime(unsigned int time_ms, int commandedPower = 50)
     {
         millisToWait = time_ms;
         motorPow = correctDrivePowerDeadband(commandedPower);
@@ -164,7 +172,7 @@ class LineFollowTime : Goal
             startMillis = millis();
             gotStartingTime = true;
         }
-        if (millis() - startMillis > millisToWait) 
+        if (millis() - startMillis > millisToWait)
         {
             stopMotors();
             return true;
@@ -173,31 +181,28 @@ class LineFollowTime : Goal
         return false;
     }
 
-    private:
-    int millisToWait;
+private:
+    unsigned int millisToWait;
     int motorPow;
     bool gotStartingTime = false;
-    int startMillis = 0;
+    unsigned long startMillis = 0;
 };
 
-class LineFollowRange : Goal
+class LineFollowRange : public Goal
 {
-    public:
-    LineFollowRange(double thresholdDistance, int speed = BASE_MAX_DRIVE_POWER)
+public:
+    LineFollowRange(double thresholdDistance, bool distanceRising=false,int speed = 50)
     {
         targetDistance = thresholdDistance;
         commandedSpeed = speed;
+        startedLess = distanceRising;
     }
 
     bool updateGoal()
     {
         double deltaRange = targetDistance - rangefinder.getDistance();
-        if (!gotStartingSign)
-        {
-            startedLess = deltaRange < 0;
-        }
-        followLine(deltaRange*DRIVE_KP);
-        if ((startedLess && deltaRange > 0) || deltaRange < 0)
+        followLine(deltaRange * DRIVE_KP);
+        if ((startedLess && deltaRange < 0) || deltaRange > 0)
         {
             stopMotors();
             return true;
@@ -205,17 +210,17 @@ class LineFollowRange : Goal
         return false;
     }
 
-    private:
+private:
     double targetDistance;
     int commandedSpeed;
     bool startedLess = false;
     bool gotStartingSign = false;
 };
 
-class RotateUntilLine : Goal
+class RotateUntilLine : public Goal
 {
-    public:
-    RotateUntilLine(bool goClockwise = false, int speed = BASE_MAX_DRIVE_POWER)
+public:
+    RotateUntilLine(bool goClockwise = false, int speed = 50)
     {
         clockwise = goClockwise;
         commandedSpeed = speed;
@@ -232,10 +237,10 @@ class RotateUntilLine : Goal
             }
             setMotorPowers(commandedSpeed, -commandedSpeed);
             return false;
-
-        } else // counterclockwise
+        }
+        else // counterclockwise
         {
-            if (analogRead(LEFT_LINE_PIN))
+            if (analogRead(LEFT_LINE_PIN) > BLACK_THRESH)
             {
                 stopMotors();
                 return true;
@@ -245,17 +250,18 @@ class RotateUntilLine : Goal
         }
     }
 
-    private:
+private:
     bool clockwise;
     int commandedSpeed;
 };
 
-class BlindRotateAngle : Goal
+class BlindRotateAngle : public Goal
 {
-    public:
-    BlindRotateAngle(double angle)
+public:
+    BlindRotateAngle(double angle, int max_speed = 50)
     {
         targetAngle = angle;
+        speedLimit = max_speed;
     }
 
     bool updateGoal()
@@ -269,13 +275,14 @@ class BlindRotateAngle : Goal
         double leftDistTraveled = getLeftMotorCM() - startLeft;
         double rightDistTraveled = getRightMotorCM() - startRight;
         double robotCircumference = 2 * PI * chassis.robotRadius;
-        double angleTraveledLeft = (leftDistTraveled / robotCircumference) * 360.0;
+        double angleTraveledLeft = -(leftDistTraveled / robotCircumference) * 360.0;
         double angleTraveledRight = (rightDistTraveled / robotCircumference) * 360.0;
         double totalAngleTraveled = angleTraveledLeft + angleTraveledRight;
 
         double deltaAngle = targetAngle - totalAngleTraveled;
-        double turnPower = deltaAngle * DRIVE_KP;
-        if (deltaAngle < DRIVE_TOLERANCE)
+        double turnPower = constrain(deltaAngle * DRIVE_KP, -speedLimit, speedLimit);
+
+        if (abs(deltaAngle) < DRIVE_TOLERANCE)
         {
             stopMotors();
             return true;
@@ -284,19 +291,21 @@ class BlindRotateAngle : Goal
         return false;
     }
 
-    private:
+private:
     double targetAngle;
+    int speedLimit;
     double startLeft = 0;
     double startRight = 0;
     double gotStartingMotorCounts = false;
 };
 
-class BlindDriveDistance : Goal
+class BlindDriveDistance : public Goal
 {
-    public:
-    BlindDriveDistance(double distance_cm)
+public:
+    BlindDriveDistance(double distance_cm, int max_speed = 50)
     {
         targetDistance = distance_cm;
+        commandedSpeed = max_speed;
     }
 
     bool updateGoal()
@@ -310,29 +319,29 @@ class BlindDriveDistance : Goal
         double currentDistance = ((getLeftMotorCM() - startLeft) + (getRightMotorCM() - startRight)) / 2;
         double deltaDistance = targetDistance - currentDistance;
 
-        if (deltaDistance < DRIVE_TOLERANCE) {
+        if (abs(deltaDistance) < DRIVE_TOLERANCE)
+        {
             stopMotors();
             return true;
         }
 
-        double motorPow = deltaDistance * DRIVE_KP;
+        double motorPow = constrain(deltaDistance * DRIVE_KP, -commandedSpeed, commandedSpeed);
         setMotorPowers(motorPow, motorPow);
         return false;
     }
 
-    private:
+private:
     double targetDistance;
     double commandedSpeed;
     double startLeft = 0;
     double startRight = 0;
     bool gotStartingDistance = false;
-
 };
 
-class BlindDriveTime : Goal
+class BlindDriveTime : public Goal
 {
-    public:
-    BlindDriveTime(double time_ms, int commandedPower=BASE_MAX_DRIVE_POWER)
+public:
+    BlindDriveTime(unsigned int time_ms, int commandedPower = 50)
     {
         millisToWait = time_ms;
         motorPow = correctDrivePowerDeadband(commandedPower);
@@ -345,7 +354,7 @@ class BlindDriveTime : Goal
             startMillis = millis();
             gotStartingTime = true;
         }
-        if (millis() - startMillis > millisToWait) 
+        if (millis() - startMillis > millisToWait)
         {
             stopMotors();
             return true;
@@ -354,21 +363,21 @@ class BlindDriveTime : Goal
         return false;
     }
 
-    private:
-    int millisToWait;
+private:
+    unsigned int millisToWait;
     int motorPow;
     bool gotStartingTime = false;
-    int startMillis = 0;
+    unsigned int startMillis = 0;
 };
 
-class WaitForButtonPress : Goal
+class WaitForButtonPress : public Goal
 {
-    public:
+public:
     WaitForButtonPress(int button)
     {
         targetButton = button;
     }
-    
+
     bool updateGoal()
     {
         int currentButton = decoder.getKeyCode(true);
@@ -379,13 +388,13 @@ class WaitForButtonPress : Goal
         return false;
     }
 
-    private:
+private:
     int targetButton;
 };
 
-class MoveLifter : Goal
+class MoveLifter : public Goal
 {
-    public:
+public:
     MoveLifter(double absoluteAngle)
     {
         targetAngle = absoluteAngle;
@@ -395,24 +404,23 @@ class MoveLifter : Goal
     {
         double deltaAngle = targetAngle - getBlueMotorAngle();
 
-        if (deltaAngle < LIFT_TOLERANCE)
+        if (abs(deltaAngle) < LIFT_TOLERANCE)
         {
             setBluePower(0);
             return true;
         }
 
-        setBluePower(deltaAngle*LIFT_KP);
+        setBluePower(400*(deltaAngle / abs(deltaAngle)));
+        return false;
     }
 
-    private:
+private:
     double targetAngle;
 };
 
-class OpenGripper : Goal
+class OpenGripper : public Goal
 {
-    public:
-    OpenGripper();
-
+public:
     bool updateGoal()
     {
         servo.writeMicroseconds(GRIPPER_OPEN_MS);
@@ -420,11 +428,9 @@ class OpenGripper : Goal
     }
 };
 
-class CloseGripper : Goal
+class CloseGripper : public Goal
 {
-    public:
-    CloseGripper();
-
+public:
     bool updateGoal()
     {
         if (!gotStartMillis)
@@ -433,7 +439,7 @@ class CloseGripper : Goal
             startMillis = millis();
             gotStartMillis = true;
         }
-        
+
         if (millis() - startMillis > GRIPPER_TIMEOUT)
         {
             if (analogRead(GRIPPER_POT_PIN) > GRIPPER_CLOSED_POT)
@@ -441,7 +447,9 @@ class CloseGripper : Goal
                 // FAILURE
                 servo.writeMicroseconds(GRIPPER_OPEN_MS);
                 return true;
-            } else {
+            }
+            else
+            {
                 // SUCCESS
                 return true;
             }
@@ -449,10 +457,86 @@ class CloseGripper : Goal
         return false;
     }
 
-    private:
-    int startMillis;
+private:
+    unsigned int startMillis;
     bool gotStartMillis = false;
 };
+
+class IndefinitelyReadGripper : public Goal
+{
+    public:
+    bool updateGoal()
+    {
+        Serial.print("Gripper reads: ");
+        Serial.println(analogRead(GRIPPER_POT_PIN));
+
+        return false;
+    }
+};
+
+class Done : public Goal
+{
+public:
+    bool updateGoal()
+    {
+        Serial.println("Done.");
+        operatingState = Operating_Done;
+        return false; // Exception to the rule: never pass this goal
+    }
+};
+
+Goal *targets[] =
+    {
+        new OpenGripper(),
+        new BlindRotateAngle(-90),
+        new RotateUntilLine(true),
+        new LineFollowUntilCrossing(),
+        new BlindDriveDistance(CROSS_PASSING_DIST),
+        new BlindRotateAngle(45),
+        new RotateUntilLine(),
+        new MoveLifter(ROOF_25_ANGLE),
+        new LineFollowRange(RANGE_LATE_APPROACH_TOWER),
+        new LineFollowTime(2000, 0),
+        new MoveLifter(ROOF_25_ANGLE),
+        new BlindDriveTime(FINAL_APPROACH_WAIT_TIME, 1),
+        new WaitForButtonPress(remote1),
+        new CloseGripper(),
+        new MoveLifter(ROOF_25_LIFTED_ANGLE),
+        new LineFollowUntilCrossing(-80),
+        new BlindDriveDistance(4.5*2.54),
+        new RotateUntilLine(),
+        new LineFollowDistance(10, 20),
+        new LineFollowRange(TRANSFER_DROPOFF_OFFSET),
+        new MoveLifter(0),
+        new OpenGripper(),
+        new BlindDriveTime(500, 0),
+        new BlindDriveDistance(-20, 20),
+        new WaitForButtonPress(remote2),
+        new BlindDriveDistance(20, 20),
+        new CloseGripper(),
+        new BlindDriveDistance(-20, 20),
+        new BlindRotateAngle(-90),
+        new RotateUntilLine(true),
+        new LineFollowUntilCrossing(),
+        new BlindDriveDistance(CROSS_PASSING_DIST),
+        new BlindRotateAngle(45),
+        new RotateUntilLine(),
+        new MoveLifter(ROOF_25_LIFTED_ANGLE),
+        new LineFollowRange(RANGE_EARLY_APPROACH_TOWER),
+        new LineFollowTime(2000, 0),
+        new MoveLifter(ROOF_25_FINAL_ANGLE),
+        new OpenGripper(),
+        new BlindDriveTime(1000, 0),
+
+        new Done()
+};
+
+
+// Goal* potMode[] =
+// {
+//     new IndefinitelyReadGripper(),
+//     new Done()
+// };
 
 void setup()
 {
@@ -463,11 +547,50 @@ void setup()
     rangefinder.init();
     Serial.begin(9600);
     servo.setMinMaxMicroseconds(900, 2800);
-
-    Goal* targets[] = 
-    {
-        
-    };
+    Serial.println("Idling.");
 }
 
-void loop(){}
+void loop()
+{
+    switch (operatingState)
+    {
+    case Operating_Idle:
+        stopMotors();
+        if (decoder.getKeyCode(true) == IR_BUTTON_START)
+        {
+            Serial.println("Running.");
+            operatingState = Operating_Running;
+        }
+        break;
+    case Operating_Running:
+        if (targets[goalIndex]->updateGoal())
+        {
+            Serial.print("Step complete: ");
+            Serial.println(goalIndex);
+            goalIndex++;
+        }
+        if (decoder.getKeyCode(true) == IR_BUTTON_PAUSE)
+        {
+            Serial.println("Paused.");
+            operatingState = Operating_Paused;
+        }
+        break;
+    case Operating_Paused:
+        stopMotors();
+        setBluePower(0);
+        if (decoder.getKeyCode(true) == IR_BUTTON_RESUME)
+        {
+            Serial.println("Resumed.");
+            operatingState = Operating_Running;
+        }
+        break;
+    case Operating_Done:
+        stopMotors();
+        setBluePower(0);
+        if (decoder.getKeyCode(true) == IR_BUTTON_RESET)
+        {
+            Serial.println("Idling.");
+            operatingState = Operating_Idle;
+        }
+    }
+}
