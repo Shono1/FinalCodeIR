@@ -33,10 +33,14 @@
 #define IR_BUTTON_RESET 0x0E // back
 
 #define TRANSFER_BLOCK_ANGLE 0
+
 #define ROOF_25_ANGLE 135
 #define ROOF_25_LIFTED_ANGLE 95
 #define ROOF_25_FINAL_ANGLE 122
 #define ROOF_45_ANGLE 87
+
+#define ROOF_45_ANGLE 56
+#define ROOF_45_LIFTED_ANGLE 78
 
 #define GRIPPER_TIMEOUT 2000
 #define GRIPPER_OPEN_MS 2800
@@ -56,6 +60,11 @@
 #define TRANSFER_DROPOFF_LIFT_ANGLE -4
 #define TRANSFER_BACKOFF -6
 #define LIFT_ANGLE_AT_PICKUP 2
+
+#define TOP_LINE_TO_CROSS_LINE 25
+#define LEG_ONE_ANGLE -60
+#define LEG_ONE_LENGTH 36
+#define TACK_ANGLE -60
 
 enum OperatingState
 {
@@ -130,7 +139,20 @@ enum ChallengeState
   Challenge_111_WaitForGoToBlock,
   Challenge_112_TurnTowardsOtherSide,
   Challenge_113_WaitForTurn,
-  Challenge_114_GunIt
+  Challenge_114_StartLegOne,
+  Challenge_115_WaitForLegOne,
+  Challenge_116_Tack,
+  Challenge_117_WaitForTack,
+  Challenge_118_StartLegTwo,
+  Challenge_120_DrivePastLine,
+  Challenge_121_WaitForDrivePastLine,
+  Challenge_122_SearchForLine,
+  Challenge_123_ApproachRoof,
+  Challenge_124_FinalApproach,
+  Challenge_125_WaitForGrip,
+  Challenge_126_GrabPlate,
+  
+
 } challengeState;
 
 enum MotorState
