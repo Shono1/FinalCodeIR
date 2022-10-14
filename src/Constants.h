@@ -18,6 +18,9 @@
 #define LIFT_DEADBAND 350
 #define TICKS_PER_LIFT_OUTPUT_DEGREE 96
 
+#define CROSS_PASSING_DIST 7
+#define TURN_OFF_LINE_ANGLE 60
+
 #define LEFT_LINE_PIN 20
 #define RIGHT_LINE_PIN 22
 #define BLACK_THRESH 400
@@ -47,6 +50,10 @@
 #define FINAL_APPROACH_WAIT_TIME 5000
 #define WAIT_FOR_GRIPPER_LIFT_TIME 3000
 #define FOLLOW_LINE_TILL_POINTED_AT_BOX_TIME 2000
+#define BACK_UP_AFTER_PICKUP -4
+
+#define TRANSFER_DROPOFF_OFFSET 10.795
+#define TRANSFER_DROPOFF_LIFT_ANGLE -4
 
 enum OperatingState
 {
@@ -78,9 +85,12 @@ enum ChallengeState
   Challenge_043_GrabPlate,
   Challenge_044_LiftBeforeBack,
   Challenge_045_BackTime,
-  Challenge_050_TurnOffLine,
-  Challenge_051_WaitForTurnOffLine,
-  Challenge_052_SearchForLine,
+  Challenge_05a_ReverseUntilLine,
+  Challenge_05b_DrivePastCross,
+  Challange_05c_WaitForDrivePastCross,
+  Challenge_05d_TurnOffLine,
+  Challenge_05e_WaitForTurnOffLine,
+  Challenge_05f_SearchForLine,
   Challenge_060_FollowLineUntilBox,
   Challenge_061_LowerArmForBox,
   Challenge_062_MoveToBox
@@ -129,7 +139,9 @@ enum MotorState
   MotorState_Idle,
   MotorState_Holding,
   MotorState_ToTarget,
-  MotorState_LineFollow
+  MotorState_LineFollow,
+  MotorState_LineFollowReverse,
+  MotorState_LineFollowForDistance
 } driveMotorState,
     blueMotorState;
 

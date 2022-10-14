@@ -40,6 +40,89 @@ void doChallenge();
 // bool turnForLine(bool cw) {
 //   setTicksAtAngleDrive()
 // }
+void driveToCross(ChallengeState nextState) {
+  driveMotorState = MotorState_LineFollow;
+  blueMotorState = MotorState_ToTarget;
+  double leftColor = analogRead(LEFT_LINE_PIN);
+  double rightColor = analogRead(RIGHT_LINE_PIN);
+
+  if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+  {
+    // driveMotorState = MotorState_ToTarget;
+    // setTicksAtDistance(0);
+    Serial.println("Hit line crossing.");
+    challengeState = nextState;
+  }
+}
+
+void drivePastCross(ChallengeState nextState) {
+  driveMotorState = MotorState_ToTarget;
+  blueMotorState = MotorState_ToTarget;
+  driveMovementDone = false;
+  setTicksAtDistance(CROSS_PASSING_DIST);
+  challengeState = nextState;
+}
+
+bool searchForLine(ChallengeState nextState, bool CCW) {
+  driveMotorState = MotorState_ToTarget;
+  blueMotorState = MotorState_ToTarget;
+  if (CCW) {
+    setTicksAtAngleDrive(10);
+    if (!leftBlackFlag)
+    {
+      leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
+    }
+    if (!rightBlackFlag && leftBlackFlag)
+    {
+      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
+    }
+
+    if (leftBlackFlag && rightBlackFlag)
+    {
+      setTicksAtAngleDrive(0);
+      liftMovementDone = false;
+      challengeState = nextState;
+    }
+  }
+  else {
+    setTicksAtAngleDrive(10);
+    if (!rightBlackFlag)
+    {
+      rightBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
+    }
+    if (!leftBlackFlag && rightBlackFlag)
+    {
+      leftBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
+    }
+
+    if (leftBlackFlag && rightBlackFlag)
+    {
+      setTicksAtAngleDrive(0);
+      liftMovementDone = false;
+      challengeState = nextState;
+    }
+  }
+  
+}
+
+bool waitForDriveMovement(ChallengeState nextState) {
+  driveMotorState = MotorState_ToTarget; 
+  blueMotorState = MotorState_ToTarget; 
+  // Serial.println("011 - Wait For Turn");
+  if (driveMovementDone)
+  {
+    challengeState = nextState;
+  }
+  return driveMovementDone;
+}
+
+void turnOffLine(ChallengeState nextState, bool CCW) {
+  driveMotorState = MotorState_ToTarget;
+  blueMotorState = MotorState_ToTarget;
+  driveMovementDone = false;
+  setTicksAtAngleDrive(pow(-1, CCW + 1) * TURN_OFF_LINE_ANGLE);
+  challengeState = nextState;
+}
 
 void openGripper() {
   gripperStartTime = millis();
@@ -241,11 +324,45 @@ void updateMotors()
     double leftColor = analogRead(LEFT_LINE_PIN);
     double rightColor = analogRead(RIGHT_LINE_PIN);
     double colorDelta = leftColor - rightColor;
+
     updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
     updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
 
     // Serial.print("Left Power: ");
     // Serial.println(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+  }
+  break;
+
+  case MotorState_LineFollowReverse:
+  {
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
+    double colorDelta = leftColor - rightColor;
+
+    updateDriveMotorPower_Directly(Motor_LeftDrive, -LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
+    updateDriveMotorPower_Directly(Motor_RightDrive, -LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+  }
+  break;
+
+  case MotorState_LineFollowForDistance:
+  {
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
+    double colorDelta = leftColor - rightColor;
+
+    leftDriveCurrentTicks = chassis.leftMotor.getCount();
+    rightDriveCurrentTicks = chassis.rightMotor.getCount();
+    double leftDelta = (leftMotorTarget - leftDriveCurrentTicks) * chassis.cmPerEncoderTick;
+    double rightDelta = (rightMotorTarget - rightDriveCurrentTicks) * chassis.cmPerEncoderTick;
+
+    updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
+    updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
+      // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
+
+    if (abs(leftDelta) < DRIVE_TOLERANCE || abs(rightDelta) < DRIVE_TOLERANCE)
+    {
+      driveMovementDone = true;
+    }
   }
   break;
   }
@@ -396,18 +513,19 @@ void doChallenge()
 
   case Challenge_020_FollowLine:
   {
-    driveMotorState = MotorState_LineFollow;
-    blueMotorState = MotorState_ToTarget;
-    double leftColor = analogRead(LEFT_LINE_PIN);
-    double rightColor = analogRead(RIGHT_LINE_PIN);
+    // driveMotorState = MotorState_LineFollow;
+    // blueMotorState = MotorState_ToTarget;
+    // double leftColor = analogRead(LEFT_LINE_PIN);
+    // double rightColor = analogRead(RIGHT_LINE_PIN);
 
-    if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
-    {
-      // driveMotorState = MotorState_ToTarget;
-      // setTicksAtDistance(0);
-      Serial.println("Hit line crossing.");
-      challengeState = Challenge_030_ForwardAtCross;
-    }
+    // if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+    // {
+    //   // driveMotorState = MotorState_ToTarget;
+    //   // setTicksAtDistance(0);
+    //   Serial.println("Hit line crossing.");
+    //   challengeState = Challenge_030_ForwardAtCross;
+    // }
+    driveToCross(Challenge_030_ForwardAtCross);
   }
   break;
 
@@ -416,25 +534,24 @@ void doChallenge()
     // driveMotorState = MotorState_ToTarget;
     // blueMotorState = MotorState_ToTarget;
     // driveMovementDone = false;
-    // setTicksAtAngleDrive(60);
+    // setTicksAtDistance(7);
     // challengeState = Challenge_031_WaitForForwardAtCross;
 
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    driveMovementDone = false;
-    setTicksAtDistance(7);
-    challengeState = Challenge_031_WaitForForwardAtCross;
+    drivePastCross(Challenge_031_WaitForForwardAtCross);
   }
   break;
 
   case Challenge_031_WaitForForwardAtCross:
   {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone)
-    {
+    // driveMotorState = MotorState_ToTarget;
+    // blueMotorState = MotorState_ToTarget;
+    // if (driveMovementDone)
+    // {
+    //   setTicksAtDistance(0);
+    //   challengeState = Challenge_032_StartTurnAtCross;
+    // }
+    if (waitForDriveMovement(Challenge_032_StartTurnAtCross)) {
       setTicksAtDistance(0);
-      challengeState = Challenge_032_StartTurnAtCross;
     }
   }
   break;
@@ -578,51 +695,69 @@ void doChallenge()
     if (driveMovementDone == true)
     {
       Serial.println("Finished Reversing.");
-      challengeState = Challenge_050_TurnOffLine;
+      // challengeState = Challenge_050_TurnOffLine;
+      challengeState = Challenge_05a_ReverseUntilLine;
     }
   }
   break;
 
-  case Challenge_050_TurnOffLine:
+  case Challenge_05a_ReverseUntilLine:
   {
-    driveMotorState = MotorState_ToTarget;
+    driveMotorState = MotorState_LineFollowReverse;
     blueMotorState = MotorState_ToTarget;
-    driveMovementDone = false;
-    setTicksAtAngleDrive(90);
-    challengeState = Challenge_051_WaitForTurnOffLine;
+
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
+
+    if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+    {
+      // driveMotorState = MotorState_ToTarget;
+      // setTicksAtDistance(0);
+      Serial.println("Hit line crossing.");
+      // challengeState = nextState;
+      challengeState = Challenge_05b_DrivePastCross;
+    }
+
   }
   break;
 
-  case Challenge_051_WaitForTurnOffLine:
+  case Challenge_05b_DrivePastCross:
   {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone) {
-      challengeState = Challenge_052_SearchForLine;
+    driveMovementDone = false;
+    drivePastCross(Challange_05c_WaitForDrivePastCross);
+  }
+  break;
+
+  case Challange_05c_WaitForDrivePastCross:
+  {
+    if(waitForDriveMovement(Challenge_05d_TurnOffLine)) {
+      setTicksAtDistance(0);
+      driveMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_05d_TurnOffLine:
+  {
+    turnOffLine(Challenge_05e_WaitForTurnOffLine, true);
+  }
+  break;
+
+  case Challenge_05e_WaitForTurnOffLine:
+  {
+    if (waitForDriveMovement(Challenge_05f_SearchForLine)) {
+      setTicksAtAngleDrive(0);
+      driveMovementDone = false;
       leftBlackFlag = false;
       rightBlackFlag = false;
     }
   }
   break;
 
-  case Challenge_052_SearchForLine:
+  case Challenge_05f_SearchForLine:
   {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    setTicksAtAngleDrive(10);
-    if (!leftBlackFlag)
-    {
-      leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
-    }
-    if (!rightBlackFlag && leftBlackFlag)
-    {
-      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
-    }
-
-    if (leftBlackFlag && rightBlackFlag)
-    {
-      challengeState = Challenge_060_FollowLineUntilBox;
-      activeMovementStartTime = millis();
+    if(searchForLine(Challenge_060_FollowLineUntilBox, true)) {
+      driveMovementDone = false;
       setTicksAtAngleDrive(0);
     }
   }
@@ -631,14 +766,30 @@ void doChallenge()
   case Challenge_060_FollowLineUntilBox:
   {
     driveMotorState = MotorState_LineFollow;
-    blueMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_Idle;
 
-    if (millis() > activeMovementStartTime + FOLLOW_LINE_TILL_POINTED_AT_BOX_TIME)
-    {
-      setTicksAtAngleLift(0);
-      liftMovementDone = false;
+    // Serial.print("Rangefinder Distance: ");
+    // Serial.println(rangefinder.getDistance());
+
+    // // if (millis() > activeMovementStartTime + FOLLOW_LINE_TILL_POINTED_AT_BOX_TIME)
+    // // {
+    // //   setTicksAtAngleLift(0);
+    // //   liftMovementDone = false;
+    // //   challengeState = Challenge_061_LowerArmForBox;
+    // // }
+    // if (driveMovementDone) {
+    //   setTicksAtAngleLift(-2);
+    //   liftMovementDone = false;
+    //   challengeState = Challenge_061_LowerArmForBox;
+      
+    // }
+
+    if (rangefinder.getDistance() < TRANSFER_DROPOFF_OFFSET) {
       challengeState = Challenge_061_LowerArmForBox;
+      setTicksAtAngleLift(TRANSFER_DROPOFF_LIFT_ANGLE);
+      liftMovementDone = false;
     }
+    
   }
   break;
 
