@@ -22,6 +22,9 @@ bool rightBlackFlag = false;
 long gripperStartTime;
 long activeMovementStartTime;
 
+long deadbandMillisZero;
+const double MillisPower = 1.0 / 500;
+
 Chassis chassis;
 BlueMotor motor;
 Romi32U4ButtonB buttonB;
@@ -218,6 +221,7 @@ void updateOpMode()
   case Operating_Idle:
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_Idle;
+    deadbandMillisZero = millis();
     // poll for start signal
     if (pollForSignal(IR_BUTTON_START))
     {
@@ -240,6 +244,7 @@ void updateOpMode()
   case Operating_Paused:
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_Idle; // if the plate's being held, keep holding! if its not, still keep holding!
+    deadbandMillisZero = millis();
 
     // poll for resume signal
     if (pollForSignal(IR_BUTTON_RESUME))
@@ -256,6 +261,7 @@ void updateOpMode()
   case Operating_Done:
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_Idle;
+    deadbandMillisZero = millis();
 
     // poll for reset signal
     if (pollForSignal(IR_BUTTON_RESET))
@@ -267,6 +273,7 @@ void updateOpMode()
   case Operating_Stopped:
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_Idle;
+    deadbandMillisZero = millis();
 
     // poll for reset signal
     if (pollForSignal(IR_BUTTON_RESET))
@@ -357,12 +364,24 @@ void updateMotors()
 
     updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
     updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
-      // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
+    // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
 
     if (abs(leftDelta) < DRIVE_TOLERANCE || abs(rightDelta) < DRIVE_TOLERANCE)
     {
       driveMovementDone = true;
     }
+  }
+  break;
+
+  case MotorState_FindDeadband:
+  {
+    int16_t powerNow = (int16_t) ((millis() - deadbandMillisZero) * MillisPower);
+
+    Serial.print("Motor Power Now: ");
+    Serial.println(powerNow);
+
+    updateDriveMotorPower_Directly(Motor_LeftDrive, powerNow);
+    updateDriveMotorPower_Directly(Motor_RightDrive, powerNow);
   }
   break;
   }
@@ -459,537 +478,8 @@ bool pollForSignal(int whichSignal)
 
 void doChallenge()
 {
-  switch (challengeState)
-  {
-  case Challenge_010_StartPreTurn:
-  {
-    driveMotorState = MotorState_ToTarget; 
-    blueMotorState = MotorState_ToTarget; 
-    setTicksAtAngleDrive(90);
-    setTicksAtAngleLift(ROOF_25_ANGLE);
-    driveMovementDone = false;
-    liftMovementDone = false;
-    challengeState = Challenge_011_WaitForTurn;
-    // Serial.println("010 - Starting Pre Turn");
-  }
-  break;
-
-  case Challenge_011_WaitForTurn:
-  {
-    // Serial.print("Gripper Pot: ");
-    // Serial.println(analogRead(18));
-    
-    driveMotorState = MotorState_ToTarget; 
-    blueMotorState = MotorState_ToTarget; 
-    // Serial.println("011 - Wait For Turn");
-    if (driveMovementDone)
-    {
-      challengeState = Challenge_012_SearchForLine;
-    }
-  }
-  break;
-
-  case Challenge_012_SearchForLine:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    // Serial.println("012 - Search for Line");
-    setTicksAtAngleDrive(10);
-    if (!leftBlackFlag)
-    {
-      leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
-    }
-    if (!rightBlackFlag && leftBlackFlag)
-    {
-      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
-    }
-
-    if (leftBlackFlag && rightBlackFlag)
-    {
-      setTicksAtAngleDrive(0);
-      challengeState = Challenge_020_FollowLine;
-    }
-  }
-  break;
-
-  case Challenge_020_FollowLine:
-  {
-    // driveMotorState = MotorState_LineFollow;
-    // blueMotorState = MotorState_ToTarget;
-    // double leftColor = analogRead(LEFT_LINE_PIN);
-    // double rightColor = analogRead(RIGHT_LINE_PIN);
-
-    // if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
-    // {
-    //   // driveMotorState = MotorState_ToTarget;
-    //   // setTicksAtDistance(0);
-    //   Serial.println("Hit line crossing.");
-    //   challengeState = Challenge_030_ForwardAtCross;
-    // }
-    driveToCross(Challenge_030_ForwardAtCross);
-  }
-  break;
-
-  case Challenge_030_ForwardAtCross:
-  {
-    // driveMotorState = MotorState_ToTarget;
-    // blueMotorState = MotorState_ToTarget;
-    // driveMovementDone = false;
-    // setTicksAtDistance(7);
-    // challengeState = Challenge_031_WaitForForwardAtCross;
-
-    drivePastCross(Challenge_031_WaitForForwardAtCross);
-  }
-  break;
-
-  case Challenge_031_WaitForForwardAtCross:
-  {
-    // driveMotorState = MotorState_ToTarget;
-    // blueMotorState = MotorState_ToTarget;
-    // if (driveMovementDone)
-    // {
-    //   setTicksAtDistance(0);
-    //   challengeState = Challenge_032_StartTurnAtCross;
-    // }
-    if (waitForDriveMovement(Challenge_032_StartTurnAtCross)) {
-      setTicksAtDistance(0);
-    }
-  }
-  break;
-
-  case Challenge_032_StartTurnAtCross:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    driveMovementDone = false;
-    setTicksAtAngleDrive(60);
-    challengeState = Challenge_033_WaitForTurnAtCross;
-  }
-  break;
-
-  case Challenge_033_WaitForTurnAtCross:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone)
-    {
-      setTicksAtDistance(0);
-      challengeState = Challenge_034_SearchForLineAtCross;
-      leftBlackFlag = false;
-      rightBlackFlag = false;
-    }
-  }
-  break;
-
-  case Challenge_034_SearchForLineAtCross:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    setTicksAtAngleDrive(10);
-    if (!leftBlackFlag)
-    {
-      leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
-    }
-    if (!rightBlackFlag && leftBlackFlag)
-    {
-      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
-    }
-
-    if (leftBlackFlag && rightBlackFlag)
-    {
-      setTicksAtAngleDrive(0);
-      liftMovementDone = false;
-      challengeState = Challenge_040_ApproachPanel;
-    }
-  }
-  break;
-
-  case Challenge_040_ApproachPanel:
-  {
-    driveMotorState = MotorState_LineFollow;
-    blueMotorState = MotorState_ToTarget;
-
-    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
-      driveMotorState = MotorState_Idle;
-      // Serial.println("Drive Stopped Early");
-    }
-
-    if (liftMovementDone)
-    {
-      Serial.println("Beginning Final Approach");
-      activeMovementStartTime = millis();
-      challengeState = Challenge_041_FinalApproach;
-    }
-  }
-  break;
-
-  case Challenge_041_FinalApproach:
-  {
-    driveMotorState = MotorState_LineFollow;
-    blueMotorState = MotorState_ToTarget;
-
-    // if (rangefinder.getDistance() < RANGE_LATE_APPROACH_TOWER) {
-    //   driveMotorState = MotorState_Idle;
-    //   Serial.println("Drive Stopped Late");
-    // }
-    // if (liftMovementDone) {
-    //   Serial.println("Lift movement complete.");
-    //   blueMotorState = MotorState_Idle;
-    //   challengeState = Challenge_042_WaitForGrip;
-    // }
-
-    if (millis() > activeMovementStartTime + FINAL_APPROACH_WAIT_TIME) {
-      Serial.println("Final Approach complete, waiting for grip signal...");
-      challengeState = Challenge_042_WaitForGrip;
-    }
-  }
-  break;
-
-  case Challenge_042_WaitForGrip:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_Idle;
-    if (pollForSignal(remote1)) {
-      challengeState = Challenge_043_GrabPlate;
-      gripperState = GripperState_CommandClose;
-      Serial.println("Gripper commanded to close.");
-    }
-  }
-  break;
-
-  case Challenge_043_GrabPlate:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_Idle;
-    if (gripperState == GripperState_Closed) {
-      Serial.println("Gripper closed.");
-      liftMovementDone = false;
-      setTicksAtAngleLift(ROOF_25_LIFTED_ANGLE);
-      activeMovementStartTime = millis();
-      challengeState = Challenge_044_LiftBeforeBack;
-    }
-    else if (gripperState == GripperState_Open) {
-      Serial.println("Gripper failed to close.");
-      challengeState = Challenge_042_WaitForGrip;
-    }
-  }
-  break;
-
-  case Challenge_044_LiftBeforeBack:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_ToTarget;
-    Serial.println("LiftingBeforeBacking");
-    if (liftMovementDone && (millis() > activeMovementStartTime + WAIT_FOR_GRIPPER_LIFT_TIME)) {
-      Serial.println("Lift movement complete, beginning to move backwards.");
-      setTicksAtDistance(-7);
-      driveMovementDone = false;
-      challengeState = Challenge_045_BackTime;
-    }
-  }
-  break;
-
-  case Challenge_045_BackTime:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (driveMovementDone == true)
-    {
-      Serial.println("Finished Reversing.");
-      // challengeState = Challenge_050_TurnOffLine;
-      challengeState = Challenge_05a_ReverseUntilLine;
-    }
-  }
-  break;
-
-  case Challenge_05a_ReverseUntilLine:
-  {
-    driveMotorState = MotorState_LineFollowReverse;
-    blueMotorState = MotorState_ToTarget;
-
-    double leftColor = analogRead(LEFT_LINE_PIN);
-    double rightColor = analogRead(RIGHT_LINE_PIN);
-
-    if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
-    {
-      // driveMotorState = MotorState_ToTarget;
-      // setTicksAtDistance(0);
-      Serial.println("Hit line crossing.");
-      // challengeState = nextState;
-      challengeState = Challenge_05b_DrivePastCross;
-    }
-
-  }
-  break;
-
-  case Challenge_05b_DrivePastCross:
-  {
-    driveMovementDone = false;
-    drivePastCross(Challange_05c_WaitForDrivePastCross);
-  }
-  break;
-
-  case Challange_05c_WaitForDrivePastCross:
-  {
-    if(waitForDriveMovement(Challenge_05d_TurnOffLine)) {
-      setTicksAtDistance(0);
-      driveMovementDone = false;
-    }
-  }
-  break;
-
-  case Challenge_05d_TurnOffLine:
-  {
-    turnOffLine(Challenge_05e_WaitForTurnOffLine, true);
-  }
-  break;
-
-  case Challenge_05e_WaitForTurnOffLine:
-  {
-    if (waitForDriveMovement(Challenge_05f_SearchForLine)) {
-      setTicksAtAngleDrive(0);
-      driveMovementDone = false;
-      leftBlackFlag = false;
-      rightBlackFlag = false;
-    }
-  }
-  break;
-
-  case Challenge_05f_SearchForLine:
-  {
-    if(searchForLine(Challenge_060_FollowLineUntilBox, true)) {
-      driveMovementDone = false;
-      setTicksAtAngleDrive(0);
-    }
-  }
-  break;
-
-  case Challenge_060_FollowLineUntilBox:
-  {
-    driveMotorState = MotorState_LineFollow;
-    blueMotorState = MotorState_Idle;
-
-    // Serial.print("Rangefinder Distance: ");
-    // Serial.println(rangefinder.getDistance());
-
-    // // if (millis() > activeMovementStartTime + FOLLOW_LINE_TILL_POINTED_AT_BOX_TIME)
-    // // {
-    // //   setTicksAtAngleLift(0);
-    // //   liftMovementDone = false;
-    // //   challengeState = Challenge_061_LowerArmForBox;
-    // // }
-    // if (driveMovementDone) {
-    //   setTicksAtAngleLift(-2);
-    //   liftMovementDone = false;
-    //   challengeState = Challenge_061_LowerArmForBox;
-      
-    // }
-
-    if (rangefinder.getDistance() < TRANSFER_DROPOFF_OFFSET) {
-      challengeState = Challenge_061_LowerArmForBox;
-      setTicksAtAngleLift(TRANSFER_DROPOFF_LIFT_ANGLE);
-      liftMovementDone = false;
-    }
-    
-  }
-  break;
-
-  case Challenge_061_LowerArmForBox:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_ToTarget;
-    if (liftMovementDone)
-    {
-      Serial.println("Finished Lowering the Arm");
-      setTicksAtDistance(0);
-      driveMovementDone = false;
-      challengeState = Challenge_062_WaitForOpen;
-      gripperState = GripperState_Open;
-    }
-  }
-  break;
-
-  case Challenge_062_WaitForOpen:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_ToTarget;
-    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10) {
-      challengeState = Challenge_063_BackOffPlatform;
-      driveMovementDone = false;
-    }
-  }
-  break;
-
-  case Challenge_063_BackOffPlatform:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    driveMovementDone = false;
-    setTicksAtDistance(TRANSFER_BACKOFF);
-    challengeState = Challenge_064_WaitForBackOff;
-  } 
-  break;
-
-  case Challenge_064_WaitForBackOff:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (waitForDriveMovement(Challenge_070_WaitForNewPlate)) {
-      setTicksAtDistance(0);
-      driveMotorState = MotorState_Idle;
-      challengeState = Challenge_070_WaitForNewPlate;
-    }
-  }
-  break;
-
-  case Challenge_070_WaitForNewPlate:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_ToTarget;
-    setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
-    if (pollForSignal(remote2)) {
-      challengeState = Challenge_071_GoToNewPlate;
-    }
-  }
-  break;
-
-  case Challenge_071_GoToNewPlate:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    driveMovementDone = false;
-    setTicksAtDistance(-TRANSFER_BACKOFF);
-    challengeState = Challenge_072_WaitForGoToNewPlate;
-  }
-  break;
-
-  case Challenge_072_WaitForGoToNewPlate:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (waitForDriveMovement(Challenge_073_GrabNewPlate)) {
-      setTicksAtDistance(0);
-    }
-  }
-  break;
-
-  case Challenge_073_GrabNewPlate:
-  {
-    driveMotorState = MotorState_Idle;
-    blueMotorState = MotorState_Idle;
-
-    gripperState = GripperState_CommandClose;
-    challengeState = Challenge_074_WaitForGrab;
-  }
-  break;
-
-  case Challenge_074_WaitForGrab:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-
-    if (gripperState == GripperState_Open) {
-      liftMovementDone = false;
-      challengeState = Challenge_063_BackOffPlatform;
-    }
-    else if (gripperState == GripperState_Closed) {
-      challengeState = Challenge_075_BackUp;
-    }
-  }
-  break;
-
-  case Challenge_075_BackUp:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    driveMovementDone = false;
-    setTicksAtDistance(TRANSFER_BACKOFF);
-    challengeState = Chllanege_076_WaitForBackUp;
-  } 
-  break;
-
-  case Chllanege_076_WaitForBackUp:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-    if (waitForDriveMovement(Challenge_080_TurnOffLine)) {
-      setTicksAtDistance(0);
-      driveMotorState = MotorState_Idle;
-    }
-  }
-  break;
-
-  case Challenge_080_TurnOffLine:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-
-    turnOffLine(Challange_081_WaitForTurnOffLine, true);
-    setTicksAtAngleLift(ROOF_25_ANGLE);
-  }
-  break;
-
-  case Challange_081_WaitForTurnOffLine:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-
-    if (waitForDriveMovement(Challenge_082_SearchForLine)) {
-      leftBlackFlag = false;
-      rightBlackFlag = false;
-    }
-  }
-  break;
-
-  case Challenge_082_SearchForLine:
-  {
-    driveMotorState = MotorState_ToTarget;
-    blueMotorState = MotorState_ToTarget;
-
-    if(searchForLine(Challenge_083_DriveUntilCross, true)) {
-      rightBlackFlag = false;
-      leftBlackFlag = false;
-    }
-
-  }
-  break;
-
-  case Challenge_083_DriveUntilCross:
-  {
-    driveToCross(Challenge_084_DrivePastCross);
-  }
-  break;
-
-  case Challenge_084_DrivePastCross:
-  {
-    drivePastCross(Challenge_085_WaitForDrivePastCross);
-  }
-  break;
-
-  case Challenge_085_WaitForDrivePastCross:
-  {
-    waitForDriveMovement(Challenge_086_TurnOffLine);
-  }
-  break;
-
-  case Challenge_086_TurnOffLine:
-  {
-    turnOffLine(Challenge_087_WaitForTurnOffLine, true);
-  }
-  break;
-
-  case Challenge_087_WaitForTurnOffLine:
-  {
-    waitForDriveMovement(Challenge_090_BeginApproach);
-  }
-  break;
-
-  default:
-  {
-    operatingState = Operating_Done;
-  }
-  break;
-  }
+  driveMotorState = MotorState_FindDeadband;
+  blueMotorState = MotorState_Idle;
 }
 
 void setup()

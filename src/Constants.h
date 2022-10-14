@@ -161,7 +161,8 @@ enum MotorState
   MotorState_ToTarget,
   MotorState_LineFollow,
   MotorState_LineFollowReverse,
-  MotorState_LineFollowForDistance
+  MotorState_LineFollowForDistance,
+  MotorState_FindDeadband
 } driveMotorState,
     blueMotorState;
 
