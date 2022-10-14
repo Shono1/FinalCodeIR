@@ -43,7 +43,8 @@ void doChallenge();
 // bool turnForLine(bool cw) {
 //   setTicksAtAngleDrive()
 // }
-void driveToCross(ChallengeState nextState) {
+void driveToCross(ChallengeState nextState)
+{
   driveMotorState = MotorState_LineFollow;
   blueMotorState = MotorState_ToTarget;
   double leftColor = analogRead(LEFT_LINE_PIN);
@@ -58,7 +59,8 @@ void driveToCross(ChallengeState nextState) {
   }
 }
 
-void drivePastCross(ChallengeState nextState) {
+void drivePastCross(ChallengeState nextState)
+{
   driveMotorState = MotorState_ToTarget;
   blueMotorState = MotorState_ToTarget;
   driveMovementDone = false;
@@ -66,10 +68,12 @@ void drivePastCross(ChallengeState nextState) {
   challengeState = nextState;
 }
 
-bool searchForLine(bool CCW) {
+bool searchForLine(bool CCW)
+{
   driveMotorState = MotorState_ToTarget;
   blueMotorState = MotorState_ToTarget;
-  if (CCW) {
+  if (CCW)
+  {
     setTicksAtAngleDrive(10);
     if (!leftBlackFlag)
     {
@@ -88,7 +92,8 @@ bool searchForLine(bool CCW) {
       // challengeState = nextState;
     }
   }
-  else {
+  else
+  {
     setTicksAtAngleDrive(10);
     if (!rightBlackFlag)
     {
@@ -110,9 +115,10 @@ bool searchForLine(bool CCW) {
   return false;
 }
 
-bool waitForDriveMovement(ChallengeState nextState) {
-  driveMotorState = MotorState_ToTarget; 
-  blueMotorState = MotorState_ToTarget; 
+bool waitForDriveMovement(ChallengeState nextState)
+{
+  driveMotorState = MotorState_ToTarget;
+  blueMotorState = MotorState_ToTarget;
   // Serial.println("011 - Wait For Turn");
   if (driveMovementDone)
   {
@@ -121,7 +127,8 @@ bool waitForDriveMovement(ChallengeState nextState) {
   return driveMovementDone;
 }
 
-void turnOffLine(ChallengeState nextState, bool CCW) {
+void turnOffLine(ChallengeState nextState, bool CCW)
+{
   driveMotorState = MotorState_ToTarget;
   blueMotorState = MotorState_ToTarget;
   driveMovementDone = false;
@@ -129,12 +136,14 @@ void turnOffLine(ChallengeState nextState, bool CCW) {
   challengeState = nextState;
 }
 
-void openGripper() {
+void openGripper()
+{
   gripperStartTime = millis();
   servo.writeMicroseconds(GRIPPER_OPEN_MS);
 }
 
-void closeGripper() {
+void closeGripper()
+{
   gripperStartTime = millis();
   servo.writeMicroseconds(500);
 }
@@ -160,14 +169,14 @@ double blueAngleFromTicks(int16_t ticks)
 
 int16_t blueTicksFromAngle(double angle)
 {
-  int16_t ticks = (int16_t) (angle * TICKS_PER_LIFT_OUTPUT_DEGREE);
+  int16_t ticks = (int16_t)(angle * TICKS_PER_LIFT_OUTPUT_DEGREE);
   return ticks;
 }
 
-void setTicksAtAngleLift(double targetAngle)  // Absolute output angle, NOT A DELTA!!!!
+void setTicksAtAngleLift(double targetAngle) // Absolute output angle, NOT A DELTA!!!!
 {
   double currentAngle = blueAngleFromTicks(motor.getPosition());
-  double angleToGo = targetAngle - currentAngle; 
+  double angleToGo = targetAngle - currentAngle;
   int16_t ticksToGo = blueTicksFromAngle(angleToGo);
   blueMotorTarget = motor.getPosition() + ticksToGo;
 }
@@ -183,10 +192,10 @@ void updateDriveMotorPower_TargetMode(Motor whichMotor, int deltaCM, int maxPowe
 {
   int16_t power = deltaCM * DRIVE_KP;
   int16_t powerClamped = constrain(power, -maxPower, maxPower);
-  
+
   if (power != 0)
   {
-    powerClamped = constrain(abs(powerClamped), DRIVE_DEADBAND, maxPower) * (power/abs(power));
+    powerClamped = constrain(abs(powerClamped), DRIVE_DEADBAND, maxPower) * (power / abs(power));
   }
 
   if (deltaCM < DRIVE_TOLERANCE / 2)
@@ -241,7 +250,9 @@ void updateOpMode()
     }
     break;
   case Operating_Running:
-    doChallenge();
+
+    doChallenge(); // TODO: remove
+
     // poll for pause or stop signal
     if (pollForSignal(IR_BUTTON_PAUSE))
     {
@@ -302,13 +313,6 @@ void updateMotors()
     chassis.rightMotor.setMotorEffort(0);
     // zero effort, no control, just stop, hammertime
     break;
-  case MotorState_Holding:
-    // proportional control w/constant setpoint (actively holding)
-    // TODO: make this actually actively hold
-    chassis.leftMotor.setMotorEffort(0);
-    chassis.rightMotor.setMotorEffort(0);
-    break;
-  break;
   case MotorState_ToTarget:
     // proportional control w/variable setpoint (moving right round baby right round)
     {
@@ -372,7 +376,7 @@ void updateMotors()
 
     updateDriveMotorPower_Directly(Motor_LeftDrive, LINE_FOLLOW_SPEED - LINE_FOLLOW_KP * colorDelta);
     updateDriveMotorPower_Directly(Motor_RightDrive, LINE_FOLLOW_SPEED + LINE_FOLLOW_KP * colorDelta);
-      // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
+    // updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
 
     if (abs(leftDelta) < DRIVE_TOLERANCE || abs(rightDelta) < DRIVE_TOLERANCE)
     {
@@ -396,17 +400,9 @@ void updateMotors()
     // zero effort, no control, just stop, hammertime
     motor.setEffort(0);
     break;
-
-  case MotorState_Holding:
-    // proportional control w/constant setpoint (actively holding)
-    // TODO: make this actually actively hold
-    motor.setEffort(0);
-    
-    break;
-  break;
   case MotorState_ToTarget:
     // proportional control w/variable setpoint (moving right round baby right round)
-    { 
+    {
       blueMotorCurrentTicks = motor.getPosition();
       double blueDelta = (blueMotorTarget - blueMotorCurrentTicks);
       updateBlueMotorPower_TargetMode(blueDelta, maxLiftPower);
@@ -429,41 +425,46 @@ void updateMotors()
   }
 }
 
-void updateGripperState() {
-  switch(gripperState) {
-    case GripperState_Open:
-    {
-      servo.writeMicroseconds(GRIPPER_OPEN_MS);
-    }
-    break;
+void updateGripperState()
+{
+  switch (gripperState)
+  {
+  case GripperState_Open:
+  {
+    servo.writeMicroseconds(GRIPPER_OPEN_MS);
+  }
+  break;
 
-    case GripperState_CommandClose:
-    {
-      Serial.println("Command Close");
-      gripperStartTime = millis();
-      servo.writeMicroseconds(GRIPPER_CLOSED_MS);
-      gripperState = GripperState_Closing;
-    }
-    break;
+  case GripperState_CommandClose:
+  {
+    Serial.println("Command Close");
+    gripperStartTime = millis();
+    servo.writeMicroseconds(GRIPPER_CLOSED_MS);
+    gripperState = GripperState_Closing;
+  }
+  break;
 
-    case GripperState_Closing:
+  case GripperState_Closing:
+  {
+    servo.writeMicroseconds(GRIPPER_CLOSED_MS);
+    if (millis() > gripperStartTime + GRIPPER_TIMEOUT)
     {
-      servo.writeMicroseconds(GRIPPER_CLOSED_MS);
-      if (millis() > gripperStartTime + GRIPPER_TIMEOUT) {
-        if (analogRead(GRIPPER_POT_PIN) > GRIPPER_CLOSED_POT) {
-          gripperState = GripperState_Open;
-        }
-        else {
-          gripperState = GripperState_Closed;
-        }
+      if (analogRead(GRIPPER_POT_PIN) > GRIPPER_CLOSED_POT)
+      {
+        gripperState = GripperState_Open;
+      }
+      else
+      {
+        gripperState = GripperState_Closed;
       }
     }
-    break;
+  }
+  break;
 
-    case GripperState_Closed:
-    {
-      servo.writeMicroseconds(GRIPPER_CLOSED_MS);
-    }
+  case GripperState_Closed:
+  {
+    servo.writeMicroseconds(GRIPPER_CLOSED_MS);
+  }
   }
 }
 
@@ -486,8 +487,8 @@ void doChallenge()
   {
   case Challenge_010_StartPreTurn:
   {
-    driveMotorState = MotorState_ToTarget; 
-    blueMotorState = MotorState_ToTarget; 
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
     setTicksAtAngleDrive(90);
     setTicksAtAngleLift(ROOF_25_ANGLE);
     driveMovementDone = false;
@@ -501,9 +502,9 @@ void doChallenge()
   {
     // Serial.print("Gripper Pot: ");
     // Serial.println(analogRead(18));
-    
-    driveMotorState = MotorState_ToTarget; 
-    blueMotorState = MotorState_ToTarget; 
+
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
     // Serial.println("011 - Wait For Turn");
     if (driveMovementDone)
     {
@@ -574,7 +575,8 @@ void doChallenge()
     //   setTicksAtDistance(0);
     //   challengeState = Challenge_032_StartTurnAtCross;
     // }
-    if (waitForDriveMovement(Challenge_032_StartTurnAtCross)) {
+    if (waitForDriveMovement(Challenge_032_StartTurnAtCross))
+    {
       setTicksAtDistance(0);
     }
   }
@@ -632,7 +634,8 @@ void doChallenge()
     driveMotorState = MotorState_LineFollow;
     blueMotorState = MotorState_ToTarget;
 
-    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
+    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER)
+    {
       driveMotorState = MotorState_Idle;
       // Serial.println("Drive Stopped Early");
     }
@@ -662,11 +665,11 @@ void doChallenge()
     //   challengeState = Challenge_042_WaitForGrip;
     // }
 
-    
     activeMovementTimeElapsed += millis() - activeMovementLastMillis;
     activeMovementLastMillis = millis();
 
-    if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME) {
+    if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME)
+    {
       Serial.println("Final Approach complete, waiting for grip signal...");
       challengeState = Challenge_042_WaitForGrip;
     }
@@ -677,7 +680,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_Idle;
-    if (pollForSignal(remote1)) {
+    if (pollForSignal(remote1))
+    {
       challengeState = Challenge_043_GrabPlate;
       gripperState = GripperState_CommandClose;
       Serial.println("Gripper commanded to close.");
@@ -689,7 +693,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_Idle;
-    if (gripperState == GripperState_Closed) {
+    if (gripperState == GripperState_Closed)
+    {
       Serial.println("Gripper closed.");
       liftMovementDone = false;
       setTicksAtAngleLift(ROOF_25_LIFTED_ANGLE);
@@ -697,7 +702,8 @@ void doChallenge()
       activeMovementLastMillis = millis();
       challengeState = Challenge_044_LiftBeforeBack;
     }
-    else if (gripperState == GripperState_Open) {
+    else if (gripperState == GripperState_Open)
+    {
       Serial.println("Gripper failed to close.");
       challengeState = Challenge_042_WaitForGrip;
     }
@@ -713,7 +719,8 @@ void doChallenge()
     activeMovementLastMillis = millis();
 
     Serial.println("LiftingBeforeBacking");
-    if (liftMovementDone && (activeMovementTimeElapsed > WAIT_FOR_GRIPPER_LIFT_TIME)) {
+    if (liftMovementDone && (activeMovementTimeElapsed > WAIT_FOR_GRIPPER_LIFT_TIME))
+    {
       Serial.println("Lift movement complete, beginning to move backwards.");
       setTicksAtDistance(-7);
       driveMovementDone = false;
@@ -751,7 +758,6 @@ void doChallenge()
       // challengeState = nextState;
       challengeState = Challenge_05b_DrivePastCross;
     }
-
   }
   break;
 
@@ -764,7 +770,8 @@ void doChallenge()
 
   case Challange_05c_WaitForDrivePastCross:
   {
-    if(waitForDriveMovement(Challenge_05d_TurnOffLine)) {
+    if (waitForDriveMovement(Challenge_05d_TurnOffLine))
+    {
       setTicksAtDistance(0);
       driveMovementDone = false;
     }
@@ -779,7 +786,8 @@ void doChallenge()
 
   case Challenge_05e_WaitForTurnOffLine:
   {
-    if (waitForDriveMovement(Challenge_05f_SearchForLine)) {
+    if (waitForDriveMovement(Challenge_05f_SearchForLine))
+    {
       setTicksAtAngleDrive(0);
       driveMovementDone = false;
       leftBlackFlag = false;
@@ -790,7 +798,8 @@ void doChallenge()
 
   case Challenge_05f_SearchForLine:
   {
-    if(searchForLine(true)) {
+    if (searchForLine(true))
+    {
       driveMovementDone = false;
       setTicksAtAngleDrive(0);
       challengeState = Challenge_060_FollowLineUntilBox;
@@ -816,15 +825,15 @@ void doChallenge()
     //   setTicksAtAngleLift(-2);
     //   liftMovementDone = false;
     //   challengeState = Challenge_061_LowerArmForBox;
-      
+
     // }
 
-    if (rangefinder.getDistance() < TRANSFER_DROPOFF_OFFSET) {
+    if (rangefinder.getDistance() < TRANSFER_DROPOFF_OFFSET)
+    {
       challengeState = Challenge_061_LowerArmForBox;
       setTicksAtAngleLift(TRANSFER_DROPOFF_LIFT_ANGLE);
       liftMovementDone = false;
     }
-    
   }
   break;
 
@@ -849,7 +858,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10 && liftMovementDone) {
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10 && liftMovementDone)
+    {
       challengeState = Challenge_063_BackOffPlatform;
       driveMovementDone = false;
     }
@@ -863,14 +873,15 @@ void doChallenge()
     driveMovementDone = false;
     setTicksAtDistance(TRANSFER_BACKOFF);
     challengeState = Challenge_064_WaitForBackOff;
-  } 
+  }
   break;
 
   case Challenge_064_WaitForBackOff:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if (waitForDriveMovement(Challenge_070_WaitForNewPlate)) {
+    if (waitForDriveMovement(Challenge_070_WaitForNewPlate))
+    {
       setTicksAtDistance(0);
       driveMotorState = MotorState_Idle;
       challengeState = Challenge_070_WaitForNewPlate;
@@ -882,8 +893,9 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    
-    if (pollForSignal(remote2)) {
+
+    if (pollForSignal(remote2))
+    {
       challengeState = Challenge_071_GoToNewPlate;
     }
   }
@@ -903,7 +915,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if (waitForDriveMovement(Challenge_073_GrabNewPlate)) {
+    if (waitForDriveMovement(Challenge_073_GrabNewPlate))
+    {
       setTicksAtDistance(0);
     }
   }
@@ -924,11 +937,13 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    if (gripperState == GripperState_Open) {
+    if (gripperState == GripperState_Open)
+    {
       liftMovementDone = false;
       challengeState = Challenge_063_BackOffPlatform;
     }
-    else if (gripperState == GripperState_Closed) {
+    else if (gripperState == GripperState_Closed)
+    {
       challengeState = Challenge_075_BackUp;
     }
   }
@@ -941,14 +956,15 @@ void doChallenge()
     driveMovementDone = false;
     setTicksAtDistance(TRANSFER_BACKOFF);
     challengeState = Chllanege_076_WaitForBackUp;
-  } 
+  }
   break;
 
   case Chllanege_076_WaitForBackUp:
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if (waitForDriveMovement(Challenge_080_TurnOffLine)) {
+    if (waitForDriveMovement(Challenge_080_TurnOffLine))
+    {
       setTicksAtDistance(0);
       driveMotorState = MotorState_Idle;
     }
@@ -970,7 +986,8 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    if (waitForDriveMovement(Challenge_082_SearchForLine)) {
+    if (waitForDriveMovement(Challenge_082_SearchForLine))
+    {
       leftBlackFlag = false;
       rightBlackFlag = false;
     }
@@ -982,12 +999,12 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    if(searchForLine(true)) {
+    if (searchForLine(true))
+    {
       rightBlackFlag = false;
       leftBlackFlag = false;
       challengeState = Challenge_083_DriveUntilCross;
     }
-
   }
   break;
 
@@ -1050,7 +1067,8 @@ void doChallenge()
     driveMotorState = MotorState_LineFollow;
     blueMotorState = MotorState_ToTarget;
 
-    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
+    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER)
+    {
       driveMotorState = MotorState_Idle;
       // Serial.println("Drive Stopped Early");
     }
@@ -1071,20 +1089,21 @@ void doChallenge()
     blueMotorState = MotorState_ToTarget;
 
     activeMovementTimeElapsed += millis() - activeMovementLastMillis;
-    activeMovementLastMillis = millis(); 
+    activeMovementLastMillis = millis();
 
-    if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME) {
+    if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME)
+    {
       Serial.println("Final Approach complete, waiting for grip signal...");
       challengeState = Challenge_092_FinalLift;
     }
   }
   break;
-  
+
   case Challenge_092_FinalLift:
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    
+
     setTicksAtAngleLift(ROOF_25_FINAL_ANGLE);
     liftMovementDone = false;
     challengeState = Challenge_093_WaitForFinalLift;
@@ -1096,7 +1115,8 @@ void doChallenge()
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
 
-    if (liftMovementDone) {
+    if (liftMovementDone)
+    {
       challengeState = Challenge_094_Release;
     }
   }
@@ -1116,7 +1136,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
-    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10) {
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10)
+    {
       challengeState = Challenge_100_ReverseUntilLine;
       driveMovementDone = false;
     }
@@ -1139,7 +1160,6 @@ void doChallenge()
       // challengeState = nextState;
       challengeState = Challenge_101_DrivePastCross;
     }
-
   }
   break;
 
@@ -1152,7 +1172,8 @@ void doChallenge()
 
   case Challenge_102_WaitForDrivePastCross:
   {
-    if(waitForDriveMovement(Challenge_103_TurnOffLine)) {
+    if (waitForDriveMovement(Challenge_103_TurnOffLine))
+    {
       setTicksAtDistance(0);
       driveMovementDone = false;
     }
@@ -1167,7 +1188,8 @@ void doChallenge()
 
   case Challenge_104_WaitForTurnOffLine:
   {
-    if (waitForDriveMovement(Challenge_105_SearchForLine)) {
+    if (waitForDriveMovement(Challenge_105_SearchForLine))
+    {
       setTicksAtAngleDrive(0);
       driveMovementDone = false;
       leftBlackFlag = false;
@@ -1180,7 +1202,8 @@ void doChallenge()
   {
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
-    if(searchForLine(true)) {
+    if (searchForLine(true))
+    {
       driveMovementDone = false;
       setTicksAtAngleDrive(0);
       challengeState = Challenge_110_GoToBlock;
@@ -1200,7 +1223,8 @@ void doChallenge()
 
   case Challenge_111_WaitForGoToBlock:
   {
-    if (driveMovementDone) {
+    if (driveMovementDone)
+    {
       challengeState = Challenge_112_TurnTowardsOtherSide;
     }
   }

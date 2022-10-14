@@ -136,7 +136,6 @@ enum ChallengeState
 enum MotorState
 {
   MotorState_Idle,
-  MotorState_Holding,
   MotorState_ToTarget,
   MotorState_LineFollow,
   MotorState_LineFollowReverse,
