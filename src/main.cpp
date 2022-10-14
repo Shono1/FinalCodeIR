@@ -397,6 +397,7 @@ void updateMotors()
     // Serial.print("Angle: ");
     // Serial.println(((double) blueMotorCurrentTicks) / ((double)TICKS_PER_LIFT_OUTPUT_DEGREE));
     break;
+
   case MotorState_LineFollow:
   {
     // unused mode
@@ -878,7 +879,83 @@ void doChallenge()
     blueMotorState = MotorState_Idle;
 
     gripperState = GripperState_CommandClose;
+    challengeState = Challenge_074_WaitForGrab;
   }
+  break;
+
+  case Challenge_074_WaitForGrab:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (gripperState == GripperState_Open) {
+      liftMovementDone = false;
+      challengeState = Challenge_063_BackOffPlatform;
+    }
+    else if (gripperState == GripperState_Closed) {
+      challengeState = Challenge_075_BackUp;
+    }
+  }
+  break;
+
+  case Challenge_075_BackUp:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveMovementDone = false;
+    setTicksAtDistance(-TRANSFER_BACKOFF);
+    challengeState = Chllanege_076_WaitForBackUp;
+  } 
+  break;
+
+  case Chllanege_076_WaitForBackUp:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (waitForDriveMovement(Challenge_080_TurnOffLine)) {
+      setTicksAtDistance(0);
+      driveMotorState = MotorState_Idle;
+    }
+  }
+  break;
+
+  case Challenge_080_TurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    turnOffLine(Challange_081_WaitForTurnOffLine, true);
+    setTicksAtAngleLift(ROOF_25_ANGLE);
+  }
+  break;
+
+  case Challange_081_WaitForTurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (waitForDriveMovement(Challenge_082_SearchForLine)) {
+      leftBlackFlag = false;
+      rightBlackFlag = false;
+    }
+  }
+  break;
+
+  case Challenge_082_SearchForLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    searchForLine(Challenge_083_DriveUntilCross, true);
+
+  }
+  break;
+
+  case Challenge_083_DriveUntilCross:
+  {
+    operatingState = Operating_Paused;
+  }
+  break;
 
   default:
   {
@@ -900,8 +977,8 @@ void setup()
 
   operatingState = Operating_Idle;
   // challengeState = Challenge_040_ApproachPanel;
-  //challengeState = Challenge_010_StartPreTurn;
-  challengeState = Challenge_070_WaitForNewPlate;
+  challengeState = Challenge_010_StartPreTurn;
+  // challengeState = Challenge_070_WaitForNewPlate;
   driveMotorState = MotorState_Idle;
   blueMotorState = MotorState_Idle;
   gripperState = GripperState_Open;

@@ -105,7 +105,10 @@ enum ChallengeState
   Challenge_074_WaitForGrab,
   Challenge_075_BackUp,
   Chllanege_076_WaitForBackUp,
-  Challenge_080_TurnOffLine
+  Challenge_080_TurnOffLine,
+  Challange_081_WaitForTurnOffLine,
+  Challenge_082_SearchForLine,
+  Challenge_083_DriveUntilCross
   // Challenge_051_WaitForStartGrab,
   // Challenge_052_WaitForEndGrab,
   // Challenge_053_LiftAndBack,
