@@ -39,7 +39,7 @@
 #define ROOF_45_ANGLE 87
 
 #define GRIPPER_TIMEOUT 2000
-#define GRIPPER_OPEN_MS 2250
+#define GRIPPER_OPEN_MS 2500
 #define GRIPPER_OPEN_POT 440
 #define GRIPPER_CLOSED_MS 500
 #define GRIPPER_CLOSED_POT 215
@@ -108,7 +108,12 @@ enum ChallengeState
   Challenge_080_TurnOffLine,
   Challange_081_WaitForTurnOffLine,
   Challenge_082_SearchForLine,
-  Challenge_083_DriveUntilCross
+  Challenge_083_DriveUntilCross,
+  Challenge_084_DrivePastCross,
+  Challenge_085_WaitForDrivePastCross,
+  Challenge_086_TurnOffLine,
+  Challenge_087_WaitForTurnOffLine,
+  Challenge_090_BeginApproach
   // Challenge_051_WaitForStartGrab,
   // Challenge_052_WaitForEndGrab,
   // Challenge_053_LiftAndBack,

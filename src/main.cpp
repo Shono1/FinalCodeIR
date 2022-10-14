@@ -903,7 +903,7 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
     driveMovementDone = false;
-    setTicksAtDistance(-TRANSFER_BACKOFF);
+    setTicksAtDistance(TRANSFER_BACKOFF);
     challengeState = Chllanege_076_WaitForBackUp;
   } 
   break;
@@ -946,14 +946,41 @@ void doChallenge()
     driveMotorState = MotorState_ToTarget;
     blueMotorState = MotorState_ToTarget;
 
-    searchForLine(Challenge_083_DriveUntilCross, true);
+    if(searchForLine(Challenge_083_DriveUntilCross, true)) {
+      rightBlackFlag = false;
+      leftBlackFlag = false;
+    }
 
   }
   break;
 
   case Challenge_083_DriveUntilCross:
   {
-    operatingState = Operating_Paused;
+    driveToCross(Challenge_084_DrivePastCross);
+  }
+  break;
+
+  case Challenge_084_DrivePastCross:
+  {
+    drivePastCross(Challenge_085_WaitForDrivePastCross);
+  }
+  break;
+
+  case Challenge_085_WaitForDrivePastCross:
+  {
+    waitForDriveMovement(Challenge_086_TurnOffLine);
+  }
+  break;
+
+  case Challenge_086_TurnOffLine:
+  {
+    turnOffLine(Challenge_087_WaitForTurnOffLine, true);
+  }
+  break;
+
+  case Challenge_087_WaitForTurnOffLine:
+  {
+    waitForDriveMovement(Challenge_090_BeginApproach);
   }
   break;
 
