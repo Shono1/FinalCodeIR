@@ -89,14 +89,14 @@ bool searchForLine(bool CCW) {
     }
   }
   else {
-    setTicksAtAngleDrive(10);
+    setTicksAtAngleDrive(-10);
     if (!rightBlackFlag)
     {
-      rightBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
+      rightBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
     }
     if (!leftBlackFlag && rightBlackFlag)
     {
-      leftBlackFlag = analogRead(RIGHT_LINE_PIN) > BLACK_THRESH;
+      leftBlackFlag = analogRead(LEFT_LINE_PIN) > BLACK_THRESH;
     }
 
     if (leftBlackFlag && rightBlackFlag)
@@ -1147,6 +1147,7 @@ void doChallenge()
   {
     driveMovementDone = false;
     drivePastCross(Challenge_102_WaitForDrivePastCross);
+    setTicksAtAngleLift(ROOF_45_ANGLE);
   }
   break;
 
@@ -1192,7 +1193,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_LineFollowForDistance;
     blueMotorState = MotorState_ToTarget;
-    setTicksAtDistance(30);
+    setTicksAtDistance(TOP_LINE_TO_CROSS_LINE);
     challengeState = Challenge_111_WaitForGoToBlock;
     driveMovementDone = false;
   }
@@ -1202,9 +1203,678 @@ void doChallenge()
   {
     if (driveMovementDone) {
       challengeState = Challenge_112_TurnTowardsOtherSide;
+      driveMovementDone = false;
     }
   }
   break;
+
+  case Challenge_112_TurnTowardsOtherSide:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    setTicksAtAngleDrive(LEG_ONE_ANGLE);
+    challengeState = Challenge_113_WaitForTurn;
+    driveMovementDone = false;
+  }
+  break;
+
+  case Challenge_113_WaitForTurn:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (driveMovementDone) {
+      challengeState = Challenge_114_StartLegOne;
+      driveMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_114_StartLegOne:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    driveMovementDone = false;
+    setTicksAtDistance(LEG_ONE_LENGTH);
+    challengeState = Challenge_115_WaitForLegOne;
+  }
+  break;
+
+  case Challenge_115_WaitForLegOne:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (driveMovementDone) {
+      challengeState = Challenge_116_Tack;
+    }
+  }
+  break;
+
+  case Challenge_116_Tack:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    driveMovementDone = false;
+    setTicksAtAngleDrive(TACK_ANGLE);
+    challengeState = Challenge_117_WaitForTack;
+
+  }
+  break;
+
+  case Challenge_117_WaitForTack:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (driveMovementDone) {
+      challengeState = Challenge_118_StartLegTwo;
+    }
+  }
+  break;
+
+  case Challenge_118_StartLegTwo:
+  {
+    driveMotorState = MotorState_FreeDrive;
+    blueMotorState = MotorState_ToTarget;
+
+    if (analogRead(LEFT_LINE_PIN) > BLACK_THRESH || analogRead(RIGHT_LINE_PIN) > BLACK_THRESH) {
+      driveMotorState = MotorState_Idle;
+      challengeState = Challenge_120_DrivePastLine;
+      Serial.println("Passed Line");
+    }
+  }
+  break;
+
+  case Challenge_120_DrivePastLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    driveMovementDone = false;
+    setTicksAtDistance(6);
+    challengeState = Challenge_121_WaitForDrivePastLine;
+  }
+  break;
+
+  case Challenge_121_WaitForDrivePastLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (driveMovementDone) {
+      challengeState = Challenge_122_SearchForLine;
+      driveMovementDone = false;
+      leftBlackFlag = false;
+      rightBlackFlag = false;
+    }   
+  }
+  break;
+
+case Challenge_122_SearchForLine:
+{
+  driveMotorState = MotorState_ToTarget;
+  blueMotorState = MotorState_ToTarget;
+
+  if (searchForLine(false)) {
+    challengeState = Challenge_123_DriveToCross;
+  }
+}
+break;
+
+case Challenge_123_DriveToCross:
+{
+  driveMotorState = MotorState_LineFollow;
+  blueMotorState = MotorState_ToTarget;
+
+  double leftColor = analogRead(LEFT_LINE_PIN);
+  double rightColor = analogRead(RIGHT_LINE_PIN);
+
+  if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+  {
+    // driveMotorState = MotorState_ToTarget;
+    setTicksAtDistance(0);
+    Serial.println("Hit line crossing.");
+    // challengeState = nextState;
+    challengeState = Challenge_124_DriveOverCross;
+  }
+}
+break;
+
+case Challenge_124_DriveOverCross:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    drivePastCross(Challenge_125_WaitForDriveOverCross);
+    driveMovementDone = false;
+  }
+  break;
+
+  case Challenge_125_WaitForDriveOverCross:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (waitForDriveMovement(Challenge_126_TurnOffLine)) {
+      setTicksAtDistance(0);
+    }
+  }
+  break;
+
+  case Challenge_126_TurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    turnOffLine(Challenge_126a_WaitForTurnOffLine, false);
+    driveMovementDone = false;
+  }
+  break;
+
+  case Challenge_126a_WaitForTurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (waitForDriveMovement(Challenge_127_SearchForLine)) {
+      setTicksAtDistance(0);
+    }
+  }
+  break;
+
+  case Challenge_127_SearchForLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (searchForLine(false)) {
+      challengeState = Challenge_130_ApproachRoof;
+      setTicksAtAngleDrive(0);
+    }
+  }
+  break;
+
+  case Challenge_130_ApproachRoof:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
+
+    if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
+      driveMotorState = MotorState_Idle;
+      // Serial.println("Drive Stopped Early");
+    }
+
+    if (liftMovementDone)
+    {
+      Serial.println("Beginning Final Approach");
+      activeMovementTimeElapsed = 0;
+      activeMovementLastMillis = millis();
+      challengeState = Challenge_131_FinalApproach;
+    }
+  }
+  break;
+
+  case Challenge_131_FinalApproach:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_ToTarget;
+
+    activeMovementTimeElapsed += millis() - activeMovementLastMillis;
+    activeMovementLastMillis = millis();
+
+    if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME) {
+      Serial.println("Final Approach complete, waiting for grip signal...");
+      challengeState = Challenge_132_WaitForGrip;
+    }
+  }
+  break;
+
+  case Challenge_132_WaitForGrip:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_Idle;
+    if (pollForSignal(remote1)) {
+      challengeState = Challenge_133_GrabPlate;
+      gripperState = GripperState_CommandClose;
+      Serial.println("Gripper commanded to close.");
+    }
+  }
+  break;
+
+  case Challenge_133_GrabPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_Idle;
+    if (gripperState == GripperState_Closed) {
+      Serial.println("Gripper closed.");
+      liftMovementDone = false;
+      setTicksAtAngleLift(ROOF_25_LIFTED_ANGLE);
+      activeMovementTimeElapsed = 0;
+      activeMovementLastMillis = millis();
+      challengeState = Challenge_134_LiftPlate;
+    }
+    else if (gripperState == GripperState_Open) {
+      Serial.println("Gripper failed to close.");
+      challengeState = Challenge_132_WaitForGrip;
+    }
+  }
+  break;
+
+  case Challenge_134_LiftPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+
+    activeMovementTimeElapsed += millis() - activeMovementLastMillis;
+    activeMovementLastMillis = millis();
+
+    Serial.println("LiftingBeforeBacking");
+    if (liftMovementDone && (activeMovementTimeElapsed > WAIT_FOR_GRIPPER_LIFT_TIME)) {
+      Serial.println("Lift movement complete, beginning to move backwards.");
+      setTicksAtDistance(-7);
+      driveMovementDone = false;
+      challengeState = Challenge_140_ReverseUntilLine;
+    }
+  }
+  break;
+
+   case Challenge_140_ReverseUntilLine:
+  {
+    driveMotorState = MotorState_LineFollowReverse;
+    blueMotorState = MotorState_ToTarget;
+
+    double leftColor = analogRead(LEFT_LINE_PIN);
+    double rightColor = analogRead(RIGHT_LINE_PIN);
+
+    if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+    {
+      // driveMotorState = MotorState_ToTarget;
+      // setTicksAtDistance(0);
+      Serial.println("Hit line crossing.");
+      // challengeState = nextState;
+      challengeState = Challenge_141_DrivePastCross;
+    }
+
+  }
+  break;
+
+  case Challenge_141_DrivePastCross:
+  {
+    driveMovementDone = false;
+    drivePastCross(Challange_142_WaitForDrivePastCross);
+  }
+  break;
+
+  case Challange_142_WaitForDrivePastCross:
+  {
+    if(waitForDriveMovement(Challenge_143_TurnOffLine)) {
+      setTicksAtDistance(0);
+      driveMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_143_TurnOffLine:
+  {
+    turnOffLine(Challenge_144_WaitForTurnOffLine, true);
+  }
+  break;
+
+  case Challenge_144_WaitForTurnOffLine:
+  {
+    if (waitForDriveMovement(Challenge_145_SearchForLine)) {
+      setTicksAtAngleDrive(0);
+      driveMovementDone = false;
+      leftBlackFlag = false;
+      rightBlackFlag = false;
+    }
+  }
+  break;
+
+  case Challenge_145_SearchForLine:
+  {
+    if(searchForLine(false)) {
+      driveMovementDone = false;
+      setTicksAtAngleDrive(0);
+      challengeState = Challenge_150_FollowLineUntilBox;
+    }
+  }
+  break;
+
+  case Challenge_150_FollowLineUntilBox:
+  {
+    driveMotorState = MotorState_LineFollow;
+    blueMotorState = MotorState_Idle;
+
+    if (rangefinder.getDistance() < TRANSFER_DROPOFF_OFFSET) {
+      challengeState = Challenge_151_LowerArmForBox;
+      setTicksAtAngleLift(TRANSFER_DROPOFF_LIFT_ANGLE);
+      liftMovementDone = false;
+    }
+    
+  }
+  break;
+
+  case Challenge_151_LowerArmForBox:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    if (liftMovementDone)
+    {
+      Serial.println("Finished Lowering the Arm");
+      setTicksAtDistance(0);
+      driveMovementDone = false;
+      challengeState = Challenge_152_WaitForOpen;
+      gripperState = GripperState_Open;
+      setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
+      liftMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_152_WaitForOpen:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10 && liftMovementDone) {
+      challengeState = Challenge_153_BackOffPlatform;
+      driveMovementDone = false;
+    }
+  }
+  break;
+
+  case Challenge_153_BackOffPlatform:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveMovementDone = false;
+    setTicksAtDistance(TRANSFER_BACKOFF);
+    challengeState = Challenge_154_WaitForBackOff;
+  } 
+  break;
+
+  case Challenge_154_WaitForBackOff:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (waitForDriveMovement(Challenge_160_WaitForNewPlate)) {
+      setTicksAtDistance(0);
+      driveMotorState = MotorState_Idle;
+      challengeState = Challenge_160_WaitForNewPlate;
+    }
+  }
+  break;
+
+  case Challenge_160_WaitForNewPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_ToTarget;
+    
+    if (pollForSignal(remote2)) {
+      challengeState = Challenge_161_GoToNewPlate;
+    }
+  }
+  break;
+
+  case Challenge_161_GoToNewPlate:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveMovementDone = false;
+    setTicksAtDistance(-TRANSFER_BACKOFF);
+    challengeState = Challenge_162_WaitForGoToNewPlate;
+  }
+  break;
+
+  case Challenge_162_WaitForGoToNewPlate:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (waitForDriveMovement(Challenge_163_GrabNewPlate)) {
+      setTicksAtDistance(0);
+    }
+  }
+  break;
+
+  case Challenge_163_GrabNewPlate:
+  {
+    driveMotorState = MotorState_Idle;
+    blueMotorState = MotorState_Idle;
+
+    gripperState = GripperState_CommandClose;
+    challengeState = Challenge_164_WaitForGrab;
+  }
+  break;
+
+  case Challenge_164_WaitForGrab:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (gripperState == GripperState_Open) {
+      liftMovementDone = false;
+      challengeState = Challenge_153_BackOffPlatform;
+    }
+    else if (gripperState == GripperState_Closed) {
+      challengeState = Challenge_165_BackUp;
+    }
+  }
+  break;
+
+  case Challenge_165_BackUp:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveMovementDone = false;
+    setTicksAtDistance(TRANSFER_BACKOFF);
+    challengeState = Chllanege_166_WaitForBackUp;
+  } 
+  break;
+
+  case Chllanege_166_WaitForBackUp:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (waitForDriveMovement(Challenge_170_TurnOffLine)) {
+      setTicksAtDistance(0);
+      driveMotorState = MotorState_Idle;
+    }
+  }
+  break;
+
+  case Challenge_080_TurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    turnOffLine(Challange_081_WaitForTurnOffLine, true);
+    setTicksAtAngleLift(ROOF_25_LIFTED_ANGLE);
+  }
+  break;
+
+  case Challange_081_WaitForTurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if (waitForDriveMovement(Challenge_082_SearchForLine)) {
+      leftBlackFlag = false;
+      rightBlackFlag = false;
+    }
+  }
+  break;
+
+  case Challenge_082_SearchForLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+
+    if(searchForLine(true)) {
+      rightBlackFlag = false;
+      leftBlackFlag = false;
+      challengeState = Challenge_083_DriveUntilCross;
+    }
+
+  }
+  break;
+
+  case Challenge_083_DriveUntilCross:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    driveToCross(Challenge_084_DrivePastCross);
+  }
+  break;
+
+  case Challenge_084_DrivePastCross:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    drivePastCross(Challenge_085_WaitForDrivePastCross);
+  }
+  break;
+
+  case Challenge_085_WaitForDrivePastCross:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    waitForDriveMovement(Challenge_086_TurnOffLine);
+  }
+  break;
+
+  case Challenge_086_TurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    turnOffLine(Challenge_087_WaitForTurnOffLine, true);
+    driveMovementDone = false;
+  }
+  break;
+
+  case Challenge_087_WaitForTurnOffLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    waitForDriveMovement(Challenge_088_SearchForLine);
+    rightBlackFlag = false;
+    leftBlackFlag = false;
+  }
+  break;
+
+  case Challenge_088_SearchForLine:
+  {
+    driveMotorState = MotorState_ToTarget;
+    blueMotorState = MotorState_ToTarget;
+    if (searchForLine(true))
+    {
+      challengeState = Challenge_090_BeginApproach;
+    }
+  }
+  break;
+
+  // case Challenge_090_BeginApproach:
+  // {
+  //   driveMotorState = MotorState_LineFollow;
+  //   blueMotorState = MotorState_ToTarget;
+
+  //   if (rangefinder.getDistance() < RANGE_EARLY_APPROACH_TOWER) {
+  //     driveMotorState = MotorState_Idle;
+  //     // Serial.println("Drive Stopped Early");
+  //   }
+
+  //   if (liftMovementDone)
+  //   {
+  //     Serial.println("Beginning Final Approach");
+  //     activeMovementTimeElapsed = 0;
+  //     activeMovementLastMillis = millis();
+  //     challengeState = Challenge_091_FinalApproach;
+  //   }
+  // }
+  // break;
+
+  // case Challenge_091_FinalApproach:
+  // {
+  //   driveMotorState = MotorState_LineFollow;
+  //   blueMotorState = MotorState_ToTarget;
+
+  //   activeMovementTimeElapsed += millis() - activeMovementLastMillis;
+  //   activeMovementLastMillis = millis(); 
+
+  //   if (activeMovementTimeElapsed > FINAL_APPROACH_WAIT_TIME) {
+  //     Serial.println("Final Approach complete, waiting for grip signal...");
+  //     challengeState = Challenge_092_FinalLift;
+  //   }
+  // }
+  // break;
+  
+  // case Challenge_092_FinalLift:
+  // {
+  //   driveMotorState = MotorState_Idle;
+  //   blueMotorState = MotorState_ToTarget;
+    
+  //   setTicksAtAngleLift(ROOF_25_FINAL_ANGLE);
+  //   liftMovementDone = false;
+  //   challengeState = Challenge_093_WaitForFinalLift;
+  // }
+  // break;
+
+  // case Challenge_093_WaitForFinalLift:
+  // {
+  //   driveMotorState = MotorState_Idle;
+  //   blueMotorState = MotorState_ToTarget;
+
+  //   if (liftMovementDone) {
+  //     challengeState = Challenge_094_Release;
+  //   }
+  // }
+  // break;
+
+  // case Challenge_094_Release:
+  // {
+  //   driveMotorState = MotorState_Idle;
+  //   blueMotorState = MotorState_ToTarget;
+
+  //   gripperState = GripperState_Open;
+  //   challengeState = Challenge_095_WaitForRelease;
+  // }
+  // break;
+
+  // case Challenge_095_WaitForRelease:
+  // {
+  //   driveMotorState = MotorState_Idle;
+  //   blueMotorState = MotorState_ToTarget;
+  //   if (abs(analogRead(GRIPPER_POT_PIN) - GRIPPER_OPEN_POT) < 10) {
+  //     challengeState = Challenge_100_ReverseUntilLine;
+  //     driveMovementDone = false;
+  //   }
+  // }
+  // break;
+
+  // case Challenge_100_ReverseUntilLine:
+  // {
+  //   driveMotorState = MotorState_LineFollowReverse;
+  //   blueMotorState = MotorState_ToTarget;
+
+  //   double leftColor = analogRead(LEFT_LINE_PIN);
+  //   double rightColor = analogRead(RIGHT_LINE_PIN);
+
+  //   if (leftColor > BLACK_THRESH && rightColor > BLACK_THRESH)
+  //   {
+  //     // driveMotorState = MotorState_ToTarget;
+  //     // setTicksAtDistance(0);
+  //     Serial.println("Hit line crossing.");
+  //     // challengeState = nextState;
+  //     challengeState = Challenge_101_DrivePastCross;
+  //   }
+
+  // }
+  // break;
+
+
 
   default:
   {
@@ -1247,4 +1917,17 @@ void loop()
   updateMotors();
   updateGripperState();
   // Serial.println(blueAngleFromTicks(motor.getPosition()));
+  // Serial.println(analogRead(GRIPPER_POT_PIN));
+  // for (int i = 500; i < 2500; i += 10) {
+  //   servo.writeMicroseconds(i);
+  //   Serial.print("Micros: ");
+  //   Serial.print(i);
+  //   Serial.print("    Pot: ");
+  //   Serial.println(analogRead(GRIPPER_POT_PIN));
+  //   delay(250);
+  // }
+  // servo.writeMicroseconds(1450);
+
+  // 1450 closed
+  // 2500 open
 }

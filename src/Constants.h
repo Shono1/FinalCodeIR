@@ -45,8 +45,8 @@
 #define GRIPPER_TIMEOUT 2000
 #define GRIPPER_OPEN_MS 2800
 #define GRIPPER_OPEN_POT 440
-#define GRIPPER_CLOSED_MS 500
-#define GRIPPER_CLOSED_POT 215
+#define GRIPPER_CLOSED_MS 1450
+#define GRIPPER_CLOSED_POT 305
 
 #define RANGE_EARLY_APPROACH_TOWER 24
 #define RANGE_LATE_APPROACH_TOWER 21
@@ -64,7 +64,7 @@
 #define TOP_LINE_TO_CROSS_LINE 25
 #define LEG_ONE_ANGLE -60
 #define LEG_ONE_LENGTH 36
-#define TACK_ANGLE -60
+#define TACK_ANGLE -30
 
 enum OperatingState
 {
@@ -147,12 +147,51 @@ enum ChallengeState
   Challenge_120_DrivePastLine,
   Challenge_121_WaitForDrivePastLine,
   Challenge_122_SearchForLine,
-  Challenge_123_ApproachRoof,
-  Challenge_124_FinalApproach,
-  Challenge_125_WaitForGrip,
-  Challenge_126_GrabPlate,
-  
-
+  Challenge_123_DriveToCross,
+  Challenge_124_DriveOverCross,
+  Challenge_125_WaitForDriveOverCross,
+  Challenge_126_TurnOffLine,
+  Challenge_126a_WaitForTurnOffLine,
+  Challenge_127_SearchForLine,
+  Challenge_130_ApproachRoof,
+  Challenge_131_FinalApproach,
+  Challenge_132_WaitForGrip,
+  Challenge_133_GrabPlate,
+  Challenge_134_LiftPlate,
+  Challenge_140_ReverseUntilLine,
+  Challenge_141_DrivePastCross,
+  Challange_142_WaitForDrivePastCross,
+  Challenge_143_TurnOffLine,
+  Challenge_144_WaitForTurnOffLine,
+  Challenge_145_SearchForLine,
+  Challenge_150_FollowLineUntilBox,
+  Challenge_151_LowerArmForBox,
+  Challenge_152_WaitForOpen,
+  Challenge_153_BackOffPlatform,
+  Challenge_154_WaitForBackOff,
+  Challenge_160_WaitForNewPlate,
+  Challenge_161_GoToNewPlate,
+  Challenge_162_WaitForGoToNewPlate,
+  Challenge_163_GrabNewPlate,
+  Challenge_164_WaitForGrab,
+  Challenge_165_BackUp,
+  Chllanege_166_WaitForBackUp,
+  Challenge_170_TurnOffLine,
+  Challange_171_WaitForTurnOffLine,
+  Challenge_172_SearchForLine,
+  Challenge_173_DriveUntilCross,
+  Challenge_174_DrivePastCross,
+  Challenge_175_WaitForDrivePastCross,
+  Challenge_176_TurnOffLine,
+  Challenge_177_WaitForTurnOffLine,
+  Challenge_178_SearchForLine,
+  Challenge_180_BeginApproach,
+  Challenge_181_FinalApproach,
+  Challenge_182_FinalLift,
+  Challenge_183_WaitForFinalLift,
+  Challenge_184_Release,
+  Challenge_185_WaitForRelease,
+  Challenge_190_ReverseUntilLine
 } challengeState;
 
 enum MotorState
