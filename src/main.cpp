@@ -826,7 +826,7 @@ void doChallenge()
       // challengeState = Challenge_062_WaitForOpen;
       challengeState = Challenge_06a_WaitBeforeReleasing;
       // gripperState = GripperState_Open;
-      setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
+      setTicksAtAngleLift(LIFT_ANGLE_AT_DROPOFF);
       liftMovementDone = false;
     }
   }
@@ -880,6 +880,7 @@ void doChallenge()
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
+    setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
     
     if (pollForSignal(remote2)) {
       challengeState = Challenge_071_GoToNewPlate;
@@ -1581,8 +1582,8 @@ case Challenge_124_DriveOverCross:
       setTicksAtDistance(0);
       driveMovementDone = false;
       challengeState = Challenge_15a_WaitBeforeReleasing;
-      gripperState = GripperState_Open;
-      setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP);
+      // gripperState = GripperState_Open;
+      setTicksAtAngleLift(LIFT_ANGLE_AT_DROPOFF);
       liftMovementDone = false;
     }
   }
@@ -1636,6 +1637,7 @@ case Challenge_124_DriveOverCross:
   {
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
+    setTicksAtAngleLift(LIFT_ANGLE_AT_PICKUP_2);
     
     if (pollForSignal(remote2)) {
       challengeState = Challenge_161_GoToNewPlate;
@@ -1715,7 +1717,7 @@ case Challenge_124_DriveOverCross:
     blueMotorState = MotorState_ToTarget;
 
     turnOffLine(Challange_171_WaitForTurnOffLine, false);
-    setTicksAtAngleLift(ROOF_45_LIFTED_ANGLE);
+    setTicksAtAngleLift(ROOF_45_REPLACEMENT_APPROACH_ANGLE);
   }
   break;
 
@@ -1796,6 +1798,7 @@ case Challenge_124_DriveOverCross:
     {
       challengeState = Challenge_180_BeginApproach;
     }
+    liftMovementDone = false;
   }
   break;
 
@@ -1840,7 +1843,7 @@ case Challenge_124_DriveOverCross:
     driveMotorState = MotorState_Idle;
     blueMotorState = MotorState_ToTarget;
     
-    setTicksAtAngleLift(ROOF_45_FINAL_ANGLE);
+    setTicksAtAngleLift(ROOF_45_ANGLE);
     liftMovementDone = false;
     challengeState = Challenge_183_WaitForFinalLift;
   }
@@ -1952,18 +1955,6 @@ void loop()
   updateOpMode();
   updateMotors();
   updateGripperState();
+  Serial.println(blueAngleFromTicks(blueMotorTarget)- blueAngleFromTicks(motor.getPosition()));
   // Serial.println(blueAngleFromTicks(motor.getPosition()));
-  // Serial.println(analogRead(GRIPPER_POT_PIN));
-  // for (int i = 500; i < 2500; i += 10) {
-  //   servo.writeMicroseconds(i);
-  //   Serial.print("Micros: ");
-  //   Serial.print(i);
-  //   Serial.print("    Pot: ");
-  //   Serial.println(analogRead(GRIPPER_POT_PIN));
-  //   delay(250);
-  // }
-  // servo.writeMicroseconds(1450);
-
-  // 1450 closed
-  // 2500 open
 }
